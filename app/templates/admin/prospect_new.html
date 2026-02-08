@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Add Prospect — WaaS Portal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Add New Prospect</h1>
+    <p>Record a business you found on Google Maps, Facebook, or via referral.</p>
+</div>
+
+<div class="card" style="max-width: 640px;">
+    <form method="POST" action="{{ url_for('admin.prospect_new') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="form-group">
+            <label for="business_name">Business Name *</label>
+            <input type="text" id="business_name" name="business_name" class="form-control"
+                   value="{{ form_data.get('business_name', '') }}"
+                   placeholder="e.g. Mario's Pizza" required>
+        </div>
+
+        <div class="content-grid">
+            <div class="form-group">
+                <label for="contact_name">Contact Name</label>
+                <input type="text" id="contact_name" name="contact_name" class="form-control"
+                       value="{{ form_data.get('contact_name', '') }}"
+                       placeholder="e.g. Mario Rossi">
+            </div>
+            <div class="form-group">
+                <label for="contact_email">Contact Email</label>
+                <input type="email" id="contact_email" name="contact_email" class="form-control"
+                       value="{{ form_data.get('contact_email', '') }}"
+                       placeholder="e.g. mario@example.com">
+            </div>
+        </div>
+
+        <div class="content-grid">
+            <div class="form-group">
+                <label for="contact_phone">Contact Phone</label>
+                <input type="text" id="contact_phone" name="contact_phone" class="form-control"
+                       value="{{ form_data.get('contact_phone', '') }}"
+                       placeholder="e.g. 555-0100">
+            </div>
+            <div class="form-group">
+                <label for="source">Source *</label>
+                <select id="source" name="source" class="form-control" required>
+                    <option value="">Select source...</option>
+                    <option value="google_maps" {{ 'selected' if form_data.get('source') == 'google_maps' }}>Google Maps</option>
+                    <option value="facebook" {{ 'selected' if form_data.get('source') == 'facebook' }}>Facebook</option>
+                    <option value="referral" {{ 'selected' if form_data.get('source') == 'referral' }}>Referral</option>
+                    <option value="other" {{ 'selected' if form_data.get('source') == 'other' }}>Other</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="source_url">Source URL</label>
+            <input type="url" id="source_url" name="source_url" class="form-control"
+                   value="{{ form_data.get('source_url', '') }}"
+                   placeholder="e.g. https://maps.google.com/...">
+            <div class="form-hint">Link to their Google Maps or Facebook listing</div>
+        </div>
+
+        <div class="form-group">
+            <label for="demo_url">Demo URL</label>
+            <input type="url" id="demo_url" name="demo_url" class="form-control"
+                   value="{{ form_data.get('demo_url', '') }}"
+                   placeholder="e.g. https://mariospizza.yourdomain.dev">
+            <div class="form-hint">The Cloudflare .dev preview link (fill in after building the site)</div>
+        </div>
+
+        <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" class="form-control" rows="4"
+                      placeholder="e.g. No website, pizza shop on Main St, 4.8★ on Google, good reviews...">{{ form_data.get('notes', '') }}</textarea>
+        </div>
+
+        <div class="flex gap-1">
+            <button type="submit" class="btn btn-primary">Add Prospect</button>
+            <a href="{{ url_for('admin.prospect_list') }}" class="btn btn-ghost">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

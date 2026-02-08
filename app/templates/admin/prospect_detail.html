@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}{{ prospect.business_name }} — WaaS Portal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-row">
+        <div>
+            <h1>{{ prospect.business_name }}</h1>
+            <p>
+                <span class="badge badge-{{ prospect.status }}">
+                    <span class="badge-dot"></span>
+                    {{ prospect.status | replace('_', ' ') | title }}
+                </span>
+                <span class="text-muted" style="margin-left: 0.5rem;">
+                    Added {{ prospect.created_at.strftime('%b %d, %Y') if prospect.created_at else '' }}
+                </span>
+            </p>
+        </div>
+        <div class="flex gap-1">
+            {% if prospect.status in ('site_built', 'pitched', 'researching') %}
+                <a href="{{ url_for('admin.prospect_convert', prospect_id=prospect.id) }}" class="btn btn-primary">
+                    Convert to Client
+                </a>
+            {% endif %}
+            {% if prospect.status == 'converted' and prospect.workspace_id %}
+                <a href="{{ url_for('admin.workspace_detail', workspace_id=prospect.workspace_id) }}" class="btn btn-secondary">
+                    View Workspace
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="content-grid">
+    <!-- Prospect Info (Editable) -->
+    <div class="card">
+        <div class="card-header">Prospect Details</div>
+        <form method="POST" action="{{ url_for('admin.prospect_update', prospect_id=prospect.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="form-group">
+                <label for="business_name">Business Name</label>
+                <input type="text" id="business_name" name="business_name" class="form-control"
+                       value="{{ prospect.business_name }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="contact_name">Contact Name</label>
+                <input type="text" id="contact_name" name="contact_name" class="form-control"
+                       value="{{ prospect.contact_name or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="contact_email">Contact Email</label>
+                <input type="email" id="contact_email" name="contact_email" class="form-control"
+                       value="{{ prospect.contact_email or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="contact_phone">Contact Phone</label>
+                <input type="text" id="contact_phone" name="contact_phone" class="form-control"
+                       value="{{ prospect.contact_phone or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="source">Source</label>
+                <select id="source" name="source" class="form-control">
+                    <option value="google_maps" {{ 'selected' if prospect.source == 'google_maps' }}>Google Maps</option>
+                    <option value="facebook" {{ 'selected' if prospect.source == 'facebook' }}>Facebook</option>
+                    <option value="referral" {{ 'selected' if prospect.source == 'referral' }}>Referral</option>
+                    <option value="other" {{ 'selected' if prospect.source == 'other' }}>Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="source_url">Source URL</label>
+                <input type="url" id="source_url" name="source_url" class="form-control"
+                       value="{{ prospect.source_url or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="demo_url">Demo URL</label>
+                <input type="url" id="demo_url" name="demo_url" class="form-control"
+                       value="{{ prospect.demo_url or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="status">Status</label>
+                <select id="status" name="status" class="form-control">
+                    {% for s in ['researching', 'site_built', 'pitched', 'converted', 'declined'] %}
+                    <option value="{{ s }}" {{ 'selected' if prospect.status == s }}>{{ s | replace('_', ' ') | title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="notes">Notes</label>
+                <textarea id="notes" name="notes" class="form-control" rows="5">{{ prospect.notes or '' }}</textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </form>
+    </div>
+
+    <!-- Quick Info Sidebar -->
+    <div>
+        <!-- Demo Site Card -->
+        {% if prospect.demo_url %}
+        <div class="card mb-2">
+            <div class="card-header">Demo Site</div>
+            <a href="{{ prospect.demo_url }}" target="_blank" class="btn btn-secondary btn-full">
+                Open Preview ↗
+            </a>
+            <div class="form-hint mt-1">{{ prospect.demo_url }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Source Card -->
+        {% if prospect.source_url %}
+        <div class="card mb-2">
+            <div class="card-header">Source Listing</div>
+            <a href="{{ prospect.source_url }}" target="_blank" class="btn btn-secondary btn-full">
+                View {{ prospect.source | replace('_', ' ') | title }} Listing ↗
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- Status Actions -->
+        <div class="card mb-2">
+            <div class="card-header">Quick Status</div>
+            <div class="admin-status-actions">
+                {% if prospect.status == 'researching' %}
+                    <form method="POST" action="{{ url_for('admin.prospect_update', prospect_id=prospect.id) }}" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="status" value="site_built">
+                        <input type="hidden" name="business_name" value="{{ prospect.business_name }}">
+                        <input type="hidden" name="source" value="{{ prospect.source }}">
+                        <button type="submit" class="btn btn-sm btn-secondary btn-full mb-1">Mark as Site Built</button>
+                    </form>
+                {% endif %}
+                {% if prospect.status == 'site_built' %}
+                    <form method="POST" action="{{ url_for('admin.prospect_update', prospect_id=prospect.id) }}" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="status" value="pitched">
+                        <input type="hidden" name="business_name" value="{{ prospect.business_name }}">
+                        <input type="hidden" name="source" value="{{ prospect.source }}">
+                        <button type="submit" class="btn btn-sm btn-secondary btn-full mb-1">Mark as Pitched</button>
+                    </form>
+                {% endif %}
+                {% if prospect.status in ('site_built', 'pitched', 'researching') %}
+                    <a href="{{ url_for('admin.prospect_convert', prospect_id=prospect.id) }}" class="btn btn-sm btn-primary btn-full mb-1">
+                        Convert to Client
+                    </a>
+                {% endif %}
+                {% if prospect.status in ('researching', 'site_built', 'pitched') %}
+                    <form method="POST" action="{{ url_for('admin.prospect_update', prospect_id=prospect.id) }}" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="status" value="declined">
+                        <input type="hidden" name="business_name" value="{{ prospect.business_name }}">
+                        <input type="hidden" name="source" value="{{ prospect.source }}">
+                        <button type="submit" class="btn btn-sm btn-ghost btn-full">Mark as Declined</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Converted Info -->
+        {% if prospect.status == 'converted' and prospect.workspace %}
+        <div class="card">
+            <div class="card-header">Client Workspace</div>
+            <p class="text-sm mb-1">
+                <span class="font-medium">{{ prospect.workspace.name }}</span>
+            </p>
+            <a href="{{ url_for('admin.workspace_detail', workspace_id=prospect.workspace.id) }}" class="btn btn-sm btn-secondary btn-full">
+                View Workspace
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="mt-2">
+    <a href="{{ url_for('admin.prospect_list') }}" class="btn btn-ghost">← Back to Prospects</a>
+</div>
+{% endblock %}

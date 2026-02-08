@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Create Account — WaaS Portal{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="card auth-card">
+        <h1 class="auth-title">Create your account</h1>
+        <p class="auth-subtitle">Complete your registration to access your portal</p>
+
+        {% if invite_error is defined and invite_error %}
+            <div class="auth-error-state">
+                <svg style="width:48px;height:48px;color:var(--gray-300);margin-bottom:1rem;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+                <p class="text-muted" style="margin-bottom: 1.25rem;">
+                    Please contact your site administrator for a new invite link.
+                </p>
+                <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">Go to login</a>
+            </div>
+        {% else %}
+            <form method="POST" action="{{ url_for('auth.register', token=token) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="token" value="{{ token }}">
+
+                <div class="form-group">
+                    <label for="full_name">Full name</label>
+                    <input
+                        type="text"
+                        id="full_name"
+                        name="full_name"
+                        class="form-control"
+                        value="{{ full_name or '' }}"
+                        placeholder="Your full name"
+                        required
+                        autofocus
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email address</label>
+                    {% if locked_email %}
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            class="form-control"
+                            value="{{ locked_email }}"
+                            readonly
+                        >
+                        <p class="form-hint">This invite is reserved for this email address.</p>
+                    {% else %}
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            class="form-control"
+                            value="{{ email or '' }}"
+                            placeholder="you@example.com"
+                            required
+                        >
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        class="form-control"
+                        placeholder="At least 8 characters"
+                        minlength="8"
+                        required
+                    >
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg btn-full">Create account</button>
+            </form>
+
+            <p class="auth-footer">
+                Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a>
+            </p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

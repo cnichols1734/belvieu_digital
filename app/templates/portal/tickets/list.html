@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Tickets — {{ g.site.display_name or g.workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-row">
+        <div>
+            <h1>Support Tickets</h1>
+            <p>View and manage your support requests</p>
+        </div>
+        {% if g.access_level == 'full' %}
+            <a href="{{ url_for('portal.ticket_new', site_slug=g.site.site_slug) }}" class="btn btn-primary">
+                <svg style="width:14px;height:14px;" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+                </svg>
+                New ticket
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+{# ── Status Filter Tabs ── #}
+<div class="ticket-filters">
+    <a href="{{ url_for('portal.ticket_list', site_slug=g.site.site_slug) }}"
+       class="ticket-filter-tab {% if not status_filter %}active{% endif %}">
+        All
+    </a>
+    <a href="{{ url_for('portal.ticket_list', site_slug=g.site.site_slug, status='open') }}"
+       class="ticket-filter-tab {% if status_filter == 'open' %}active{% endif %}">
+        Open
+    </a>
+    <a href="{{ url_for('portal.ticket_list', site_slug=g.site.site_slug, status='in_progress') }}"
+       class="ticket-filter-tab {% if status_filter == 'in_progress' %}active{% endif %}">
+        In Progress
+    </a>
+    <a href="{{ url_for('portal.ticket_list', site_slug=g.site.site_slug, status='waiting_on_client') }}"
+       class="ticket-filter-tab {% if status_filter == 'waiting_on_client' %}active{% endif %}">
+        Waiting
+    </a>
+    <a href="{{ url_for('portal.ticket_list', site_slug=g.site.site_slug, status='done') }}"
+       class="ticket-filter-tab {% if status_filter == 'done' %}active{% endif %}">
+        Done
+    </a>
+</div>
+
+{# ── Ticket Table ── #}
+{% if tickets %}
+<div class="table-container">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Subject</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Last Activity</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ticket in tickets %}
+            <tr>
+                <td>
+                    <a href="{{ url_for('portal.ticket_detail', site_slug=g.site.site_slug, ticket_id=ticket.id) }}" class="table-link">
+                        {{ ticket.subject }}
+                    </a>
+                </td>
+                <td>
+                    {% if ticket.category %}
+                        <span class="text-muted">{{ ticket.category|replace('_', ' ')|capitalize }}</span>
+                    {% else %}
+                        <span class="text-tertiary">&mdash;</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if ticket.status == 'open' %}
+                        <span class="badge badge-open"><span class="badge-dot"></span> Open</span>
+                    {% elif ticket.status == 'in_progress' %}
+                        <span class="badge badge-in-progress"><span class="badge-dot"></span> In Progress</span>
+                    {% elif ticket.status == 'waiting_on_client' %}
+                        <span class="badge badge-waiting"><span class="badge-dot"></span> Waiting</span>
+                    {% elif ticket.status == 'done' %}
+                        <span class="badge badge-done"><span class="badge-dot"></span> Done</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if ticket.priority == 'high' %}
+                        <span class="badge badge-canceled"><span class="badge-dot"></span> High</span>
+                    {% elif ticket.priority == 'normal' %}
+                        <span class="badge badge-trialing"><span class="badge-dot"></span> Normal</span>
+                    {% else %}
+                        <span class="badge badge-paused"><span class="badge-dot"></span> Low</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="text-muted text-sm">
+                        {{ ticket.last_activity_at.strftime('%b %d, %Y') if ticket.last_activity_at else '&mdash;' }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"/>
+    </svg>
+    <h3>No tickets{% if status_filter %} matching "{{ status_filter|replace('_', ' ') }}"{% endif %}</h3>
+    <p>
+        {% if status_filter %}
+            Try removing the filter to see all tickets.
+        {% else %}
+            Need help with your website? Create a support ticket and we'll get back to you.
+        {% endif %}
+    </p>
+    {% if g.access_level == 'full' and not status_filter %}
+        <a href="{{ url_for('portal.ticket_new', site_slug=g.site.site_slug) }}" class="btn btn-primary">Create a ticket</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

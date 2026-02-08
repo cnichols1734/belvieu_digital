@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Choose a Plan — {{ g.site.display_name or g.workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="cta-page" style="max-width: 100%; padding-bottom: 2rem;">
+    <h1>Choose your plan</h1>
+    <p style="max-width: 420px; margin: 0 auto 2.5rem;">
+        Get your custom-built website live. Pick the plan that works for your business.
+    </p>
+</div>
+
+<div class="pricing-grid">
+    {# ── Basic Plan ── #}
+    <div class="pricing-card">
+        <div class="pricing-plan-name">Basic</div>
+        <div class="pricing-price">$59<span>/mo</span></div>
+        <div class="pricing-description">Everything you need to get online</div>
+
+        <ul class="pricing-features">
+            <li>
+                <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                Custom-built website
+            </li>
+            <li>
+                <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                Hosting included
+            </li>
+            <li>
+                <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                SSL certificate
+            </li>
+            <li>
+                <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                Support portal access
+            </li>
+            <li>
+                <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                Content updates (2/month)
+            </li>
+        </ul>
+
+        <form method="POST" action="{{ url_for('billing.checkout', site_slug=g.site.site_slug) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="price_id" value="{{ config.STRIPE_BASIC_PRICE_ID }}">
+            <button type="submit" class="btn btn-secondary btn-lg btn-full">Get started</button>
+        </form>
+    </div>
+
+    {# ── Pro Plan ── #}
+    <div class="pricing-card pricing-card-featured">
+        <div class="pricing-badge">Most Popular</div>
+        <div class="pricing-plan-name">Pro</div>
+        <div class="pricing-price">$99<span>/mo</span></div>
+        <div class="pricing-description">For businesses that want more</div>
+
+        <ul class="pricing-features">
+            <li>
+                <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                Everything in Basic
+            </li>
+            <li>
+                <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                Custom domain setup
+            </li>
+            <li>
+                <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                Priority support
+            </li>
+            <li>
+                <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                Content updates (unlimited)
+            </li>
+            <li>
+                <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                Analytics dashboard
+            </li>
+        </ul>
+
+        <form method="POST" action="{{ url_for('billing.checkout', site_slug=g.site.site_slug) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="price_id" value="{{ config.STRIPE_PRO_PRICE_ID }}">
+            <button type="submit" class="btn btn-primary btn-lg btn-full">Get started</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

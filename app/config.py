@@ -1,0 +1,98 @@
+import os
+
+
+class Config:
+    """Base configuration. Shared across all environments."""
+
+    # --- Required ---
+    SECRET_KEY = os.environ.get("SECRET_KEY")
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
+    STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")
+    STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET")
+    STRIPE_BASIC_PRICE_ID = os.environ.get("STRIPE_BASIC_PRICE_ID")
+    STRIPE_PRO_PRICE_ID = os.environ.get("STRIPE_PRO_PRICE_ID")
+    APP_BASE_URL = os.environ.get("APP_BASE_URL", "http://localhost:5000")
+
+    # --- Optional / Supabase dual connection ---
+    # Pooler URL for runtime, direct URL for migrations (DDL).
+    DATABASE_DIRECT_URL = os.environ.get("DATABASE_DIRECT_URL")
+
+    # --- SQLAlchemy ---
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+    }
+
+    # --- Session / cookies ---
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = "Lax"
+
+    # --- WTF / CSRF ---
+    WTF_CSRF_ENABLED = True
+
+    @staticmethod
+    def validate():
+        """Fail fast if required env vars are missing."""
+        required = [
+            "SECRET_KEY",
+            "DATABASE_URL",
+            "STRIPE_SECRET_KEY",
+            "STRIPE_WEBHOOK_SECRET",
+            "STRIPE_BASIC_PRICE_ID",
+            "STRIPE_PRO_PRICE_ID",
+        ]
+        missing = [v for v in required if not os.environ.get(v)]
+        if missing:
+            raise RuntimeError(
+                f"Missing required environment variables: {', '.join(missing)}"
+            )
+
+
+class DevConfig(Config):
+    """Local development."""
+
+    DEBUG = True
+    SESSION_COOKIE_SECURE = False
+    REMEMBER_COOKIE_SECURE = False
+
+
+class TestConfig(Config):
+    """Testing — in-memory SQLite, CSRF disabled."""
+
+    TESTING = True
+    DEBUG = True
+    SECRET_KEY = "test-secret-key-not-for-production"
+    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    STRIPE_SECRET_KEY = "sk_test_fake"
+    STRIPE_WEBHOOK_SECRET = "whsec_test_fake"
+    STRIPE_BASIC_PRICE_ID = "price_basic_test"
+    STRIPE_PRO_PRICE_ID = "price_pro_test"
+    APP_BASE_URL = "http://localhost:5000"
+    WTF_CSRF_ENABLED = False  # disable CSRF for test forms
+    RATELIMIT_ENABLED = False  # disable rate limiting in tests
+    SESSION_COOKIE_SECURE = False
+    REMEMBER_COOKIE_SECURE = False
+    SERVER_NAME = "localhost"
+
+    @staticmethod
+    def validate():
+        """Skip validation in test mode — everything is hardcoded."""
+        pass
+
+
+class ProdConfig(Config):
+    """Production on Railway."""
+
+    DEBUG = False
+    SESSION_COOKIE_SECURE = True
+    REMEMBER_COOKIE_SECURE = True
+
+
+config_by_name = {
+    "development": DevConfig,
+    "production": ProdConfig,
+    "testing": TestConfig,
+}

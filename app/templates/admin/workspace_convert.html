@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Convert {{ prospect.business_name }} — WaaS Portal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Convert to Client</h1>
+    <p>Create a workspace, site, and invite for <strong>{{ prospect.business_name }}</strong>.</p>
+</div>
+
+<div class="card" style="max-width: 640px;">
+    <form method="POST" action="{{ url_for('admin.prospect_convert', prospect_id=prospect.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="alert alert-info mb-2">
+            <svg class="alert-icon" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+            </svg>
+            <div>
+                This will create a workspace, site, and invite token from the prospect record.
+                The invite link will be shown on the next page for you to send to the client.
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="site_slug">Site Slug *</label>
+            <input type="text" id="site_slug" name="site_slug" class="form-control"
+                   value="{{ form_data.get('site_slug', prospect.business_name | lower | replace(' ', '-')) }}"
+                   placeholder="e.g. marios-pizza" required>
+            <div class="form-hint">URL path for the client portal: /site-slug/dashboard</div>
+        </div>
+
+        <div class="form-group">
+            <label for="display_name">Display Name</label>
+            <input type="text" id="display_name" name="display_name" class="form-control"
+                   value="{{ form_data.get('display_name', prospect.business_name) }}"
+                   placeholder="{{ prospect.business_name }}">
+        </div>
+
+        <div class="form-group">
+            <label for="published_url">Published URL</label>
+            <input type="url" id="published_url" name="published_url" class="form-control"
+                   value="{{ form_data.get('published_url', prospect.demo_url or '') }}"
+                   placeholder="e.g. https://marios-pizza.yourdomain.dev">
+            <div class="form-hint">Defaults to the demo URL if left blank</div>
+        </div>
+
+        <div class="form-group">
+            <label for="custom_domain">Custom Domain</label>
+            <input type="text" id="custom_domain" name="custom_domain" class="form-control"
+                   value="{{ form_data.get('custom_domain', '') }}"
+                   placeholder="e.g. mariospizza.com">
+            <div class="form-hint">Optional — set after the client purchases a domain</div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="form-group">
+            <label for="invite_email">Lock Invite to Email</label>
+            <input type="email" id="invite_email" name="invite_email" class="form-control"
+                   value="{{ form_data.get('invite_email', prospect.contact_email or '') }}"
+                   placeholder="e.g. mario@example.com">
+            <div class="form-hint">Optional — if set, only this email can use the invite link</div>
+        </div>
+
+        <div class="flex gap-1">
+            <button type="submit" class="btn btn-primary">Convert to Client</button>
+            <a href="{{ url_for('admin.prospect_detail', prospect_id=prospect.id) }}" class="btn btn-ghost">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Client Created — WaaS Portal{% endblock %}
+
+{% block content %}
+<div class="cta-page">
+    <svg class="cta-page-icon" style="color: var(--green-500);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    <h1>Client Created Successfully!</h1>
+    <p>
+        <strong>{{ prospect.business_name }}</strong> has been converted to a client.
+        Send them the invite link below to get started.
+    </p>
+</div>
+
+<div class="card" style="max-width: 640px; margin: 0 auto;">
+    <div class="card-header">Invite Link</div>
+    <p class="text-sm text-muted mb-1">Copy this link and send it to your client. It expires in 30 days.</p>
+
+    <div class="admin-invite-link-box">
+        <input type="text" class="form-control" id="invite-link-input"
+               value="{{ invite_link }}" readonly onclick="this.select()">
+        <button type="button" class="btn btn-primary btn-sm" onclick="copyInviteLink()">Copy</button>
+    </div>
+
+    {% if invite.email %}
+    <p class="form-hint mt-1">Locked to: {{ invite.email }}</p>
+    {% endif %}
+
+    <hr class="divider">
+
+    <div class="content-grid">
+        <div>
+            <span class="text-muted text-sm">Workspace</span>
+            <p class="font-medium">{{ workspace.name }}</p>
+        </div>
+        <div>
+            <span class="text-muted text-sm">Site Slug</span>
+            <p class="font-medium">/{{ site.site_slug }}/</p>
+        </div>
+        <div>
+            <span class="text-muted text-sm">Published URL</span>
+            <p class="font-medium">{{ site.published_url or '—' }}</p>
+        </div>
+        <div>
+            <span class="text-muted text-sm">Status</span>
+            <p>
+                <span class="badge badge-{{ site.status }}">
+                    <span class="badge-dot"></span>
+                    {{ site.status | title }}
+                </span>
+            </p>
+        </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="flex gap-1">
+        <a href="{{ url_for('admin.workspace_detail', workspace_id=workspace.id) }}" class="btn btn-secondary">
+            View Workspace
+        </a>
+        <a href="{{ url_for('admin.prospect_list') }}" class="btn btn-ghost">
+            Back to Prospects
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyInviteLink() {
+    const input = document.getElementById('invite-link-input');
+    input.select();
+    input.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(input.value).then(function() {
+        const btn = input.nextElementSibling;
+        btn.textContent = 'Copied!';
+        setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+    });
+}
+</script>
+{% endblock %}

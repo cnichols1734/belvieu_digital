@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard — WaaS Portal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Admin Dashboard</h1>
+    <p>Pipeline overview, revenue, and operations at a glance.</p>
+</div>
+
+<!-- Stats Grid -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Pipeline</div>
+        <div class="stat-value">{{ total_prospects }}</div>
+        <div class="stat-detail">Total prospects</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Active Subscriptions</div>
+        <div class="stat-value">{{ active_count }}</div>
+        <div class="stat-detail">${{ mrr }}/mo MRR</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Open Tickets</div>
+        <div class="stat-value">{{ open_tickets_count }}</div>
+        <div class="stat-detail"><a href="{{ url_for('admin.ticket_list') }}">View all</a></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Conversion Rate</div>
+        <div class="stat-value">{{ conversion_rate }}%</div>
+        <div class="stat-detail">Pitched → Converted</div>
+    </div>
+</div>
+
+<!-- Content Grid -->
+<div class="content-grid">
+    <!-- Pipeline Breakdown -->
+    <div class="card">
+        <div class="card-header">
+            <span>Prospect Pipeline</span>
+            <a href="{{ url_for('admin.prospect_list') }}" class="btn btn-sm btn-secondary">View all</a>
+        </div>
+        <div class="admin-pipeline-list">
+            {% for status in ['researching', 'site_built', 'pitched', 'converted', 'declined'] %}
+            <a href="{{ url_for('admin.prospect_list', status=status) }}" class="admin-pipeline-row">
+                <span class="admin-pipeline-label">
+                    <span class="badge badge-{{ status }}">
+                        <span class="badge-dot"></span>
+                        {{ status | replace('_', ' ') | title }}
+                    </span>
+                </span>
+                <span class="admin-pipeline-count">{{ pipeline_counts.get(status, 0) }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Quick Actions & Pending -->
+    <div class="card">
+        <div class="card-header">Quick Actions</div>
+        <div class="admin-actions-list">
+            <a href="{{ url_for('admin.prospect_new') }}" class="btn btn-primary btn-full mb-1">
+                + Add New Prospect
+            </a>
+            <a href="{{ url_for('admin.workspace_list') }}" class="btn btn-secondary btn-full mb-1">
+                Manage Workspaces
+            </a>
+            <a href="{{ url_for('admin.ticket_list') }}" class="btn btn-secondary btn-full">
+                View All Tickets
+            </a>
+        </div>
+        {% if pending_invites > 0 %}
+        <hr class="divider">
+        <div class="admin-pending-stat">
+            <span class="text-muted">Pending invites:</span>
+            <span class="font-semibold">{{ pending_invites }}</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="card mt-3">
+    <div class="card-header">Recent Activity</div>
+    {% if recent_activity %}
+    <div class="admin-activity-feed">
+        {% for event in recent_activity %}
+        <div class="admin-activity-item">
+            <div class="admin-activity-action">
+                <span class="badge badge-{{ event.action.split('.')[0] }}">{{ event.action }}</span>
+            </div>
+            <div class="admin-activity-meta">
+                {% if event.actor %}
+                    <span class="font-medium">{{ event.actor.full_name or event.actor.email }}</span>
+                {% else %}
+                    <span class="text-muted">System</span>
+                {% endif %}
+                <span class="text-tertiary">·</span>
+                <span class="text-tertiary">{{ event.created_at.strftime('%b %d, %Y %H:%M') if event.created_at else '' }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No activity yet.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

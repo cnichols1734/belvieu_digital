@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Workspaces — WaaS Portal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-row">
+        <div>
+            <h1>Workspaces</h1>
+            <p>All client workspaces with subscription and invite status.</p>
+        </div>
+    </div>
+</div>
+
+{% if workspace_data %}
+<div class="table-container">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Workspace</th>
+                <th>Site Slug</th>
+                <th>Plan</th>
+                <th>Subscription</th>
+                <th>Invite</th>
+                <th>Created</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for wd in workspace_data %}
+            <tr>
+                <td>
+                    <a href="{{ url_for('admin.workspace_detail', workspace_id=wd.workspace.id) }}" class="table-link">
+                        {{ wd.workspace.name }}
+                    </a>
+                    {% if wd.workspace.prospect_id %}
+                        <span class="text-tertiary text-xs" style="margin-left: 0.25rem;">
+                            <a href="{{ url_for('admin.prospect_detail', prospect_id=wd.workspace.prospect_id) }}">from prospect</a>
+                        </span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if wd.site %}
+                        <span class="font-mono text-sm">/{{ wd.site.site_slug }}/</span>
+                    {% else %}
+                        <span class="text-tertiary">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if wd.subscription %}
+                        <span class="badge badge-{{ wd.subscription.plan or 'demo' }}">
+                            {{ (wd.subscription.plan or 'Unknown') | title }}
+                        </span>
+                    {% else %}
+                        <span class="text-tertiary text-sm">No plan</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if wd.subscription %}
+                        <span class="badge badge-{{ wd.subscription.status }}">
+                            <span class="badge-dot"></span>
+                            {{ wd.subscription.status | replace('_', ' ') | title }}
+                        </span>
+                    {% else %}
+                        <span class="text-tertiary text-sm">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if wd.latest_invite %}
+                        {% if wd.latest_invite.is_used %}
+                            <span class="badge badge-done">Used</span>
+                        {% elif wd.latest_invite.is_expired %}
+                            <span class="badge badge-canceled">Expired</span>
+                        {% else %}
+                            <span class="badge badge-open">Pending</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-tertiary text-sm">—</span>
+                    {% endif %}
+                </td>
+                <td class="text-muted text-sm">
+                    {{ wd.workspace.created_at.strftime('%b %d, %Y') if wd.workspace.created_at else '' }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3H21m-3.75 3H21" />
+    </svg>
+    <h3>No workspaces yet</h3>
+    <p>Convert a prospect to create your first workspace.</p>
+    <a href="{{ url_for('admin.prospect_list') }}" class="btn btn-primary">View Prospects</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}New Ticket — {{ g.site.display_name or g.workspace.name }}{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('portal.ticket_list', site_slug=g.site.site_slug) }}" class="back-link">
+    <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clip-rule="evenodd"/></svg>
+    Back to tickets
+</a>
+
+<div class="page-header">
+    <h1>Create a ticket</h1>
+    <p>Describe what you need help with and we'll get back to you</p>
+</div>
+
+<div class="card" style="max-width: 640px;">
+    <form method="POST" action="{{ url_for('portal.ticket_new', site_slug=g.site.site_slug) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="form-group">
+            <label for="subject">Subject</label>
+            <input type="text" id="subject" name="subject" class="form-control"
+                   placeholder="Brief summary of your request"
+                   value="{{ subject|default('', true) }}" required maxlength="255">
+        </div>
+
+        <div class="form-group">
+            <label for="category">Category</label>
+            <select id="category" name="category" class="form-control">
+                <option value="">Select a category (optional)</option>
+                <option value="content_update" {% if category|default('') == 'content_update' %}selected{% endif %}>Content Update</option>
+                <option value="bug" {% if category|default('') == 'bug' %}selected{% endif %}>Bug Report</option>
+                <option value="question" {% if category|default('') == 'question' %}selected{% endif %}>Question</option>
+            </select>
+            <div class="form-hint">What type of request is this?</div>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" class="form-control"
+                      placeholder="Provide details about your request. The more context you give, the faster we can help."
+                      rows="6" required>{{ description|default('', true) }}</textarea>
+        </div>
+
+        <div class="flex items-center gap-1" style="padding-top: 0.5rem;">
+            <button type="submit" class="btn btn-primary">Submit ticket</button>
+            <a href="{{ url_for('portal.ticket_list', site_slug=g.site.site_slug) }}" class="btn btn-ghost">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

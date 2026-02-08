@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}{{ ticket.subject }} — Admin — WaaS Portal{% endblock %}
+
+{% block content %}
+<!-- Ticket Header -->
+<div class="ticket-header">
+    <div class="ticket-header-top">
+        <h1 class="ticket-title">{{ ticket.subject }}</h1>
+        <div class="ticket-badges">
+            <span class="badge badge-{{ ticket.status | replace('_', '-') }}">
+                <span class="badge-dot"></span>
+                {{ ticket.status | replace('_', ' ') | title }}
+            </span>
+            <span class="badge badge-{{ ticket.priority }}">{{ ticket.priority | title }}</span>
+        </div>
+    </div>
+    <div class="ticket-meta">
+        <a href="{{ url_for('admin.workspace_detail', workspace_id=workspace.id) }}">{{ workspace.name }}</a>
+        <span class="ticket-meta-sep">·</span>
+        {% if ticket.category %}{{ ticket.category | replace('_', ' ') | title }}<span class="ticket-meta-sep">·</span>{% endif %}
+        Opened by {{ ticket.author.full_name or ticket.author.email if ticket.author else 'Unknown' }}
+        <span class="ticket-meta-sep">·</span>
+        {{ ticket.created_at.strftime('%b %d, %Y %H:%M') if ticket.created_at else '' }}
+        {% if ticket.assigned_to %}
+            <span class="ticket-meta-sep">·</span>
+            Assigned to <span class="font-medium">{{ ticket.assigned_to.full_name or ticket.assigned_to.email }}</span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="content-grid">
+    <!-- Thread + Reply (Left) -->
+    <div>
+        <!-- Original Description -->
+        <div class="ticket-thread">
+            <div class="ticket-message">
+                <div class="ticket-message-header">
+                    <div class="ticket-message-avatar">
+                        {{ (ticket.author.full_name or ticket.author.email)[0] | upper if ticket.author else '?' }}
+                    </div>
+                    <div>
+                        <span class="ticket-message-author">{{ ticket.author.full_name or ticket.author.email if ticket.author else 'Unknown' }}</span>
+                        <span class="ticket-message-time">{{ ticket.created_at.strftime('%b %d, %Y %H:%M') if ticket.created_at else '' }}</span>
+                    </div>
+                </div>
+                <div class="ticket-message-body">{{ ticket.description }}</div>
+            </div>
+
+            <!-- Message Thread -->
+            {% for msg in messages %}
+            <div class="ticket-message {% if msg.author and msg.author.is_admin %}ticket-message-admin{% endif %} {% if msg.is_internal %}ticket-message-internal{% endif %}">
+                <div class="ticket-message-header">
+                    <div class="ticket-message-avatar {% if msg.author and msg.author.is_admin %}ticket-message-avatar-admin{% endif %}">
+                        {{ (msg.author.full_name or msg.author.email)[0] | upper if msg.author else '?' }}
+                    </div>
+                    <div>
+                        <span class="ticket-message-author">
+                            {{ msg.author.full_name or msg.author.email if msg.author else 'Unknown' }}
+                            {% if msg.author and msg.author.is_admin %}
+                                <span class="badge badge-demo" style="margin-left: 0.25rem; font-size: 9px; padding: 0.1rem 0.35rem;">Support</span>
+                            {% endif %}
+                            {% if msg.is_internal %}
+                                <span class="badge" style="background: var(--yellow-50); color: var(--yellow-700); margin-left: 0.25rem; font-size: 9px; padding: 0.1rem 0.35rem;">Internal</span>
+                            {% endif %}
+                        </span>
+                        <span class="ticket-message-time">{{ msg.created_at.strftime('%b %d, %Y %H:%M') if msg.created_at else '' }}</span>
+                    </div>
+                </div>
+                <div class="ticket-message-body">{{ msg.message }}</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Reply Form -->
+        {% if ticket.status != 'done' %}
+        <div class="ticket-reply">
+            <form method="POST" action="{{ url_for('admin.ticket_reply', ticket_id=ticket.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label for="message">Reply</label>
+                    <textarea id="message" name="message" class="form-control" rows="4"
+                              placeholder="Type your reply..."></textarea>
+                </div>
+                <div class="flex items-center justify-between">
+                    <label class="check-label">
+                        <input type="checkbox" name="is_internal">
+                        <span>Internal note (only visible to admins)</span>
+                    </label>
+                    <button type="submit" class="btn btn-primary">Send Reply</button>
+                </div>
+            </form>
+        </div>
+        {% else %}
+        <div class="ticket-reply-closed">
+            <p>This ticket is marked as done.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Controls Sidebar (Right) -->
+    <div>
+        <!-- Status Control -->
+        <div class="card mb-2">
+            <div class="card-header">Status</div>
+            <form method="POST" action="{{ url_for('admin.ticket_status', ticket_id=ticket.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <select name="status" class="form-control mb-1">
+                    {% for s in ['open', 'in_progress', 'waiting_on_client', 'done'] %}
+                    <option value="{{ s }}" {{ 'selected' if ticket.status == s }}>
+                        {{ s | replace('_', ' ') | title }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-sm btn-secondary btn-full">Update Status</button>
+            </form>
+        </div>
+
+        <!-- Priority Control -->
+        <div class="card mb-2">
+            <div class="card-header">Priority</div>
+            <div class="admin-detail-row">
+                <span class="admin-detail-label">Current</span>
+                <span class="badge badge-{{ ticket.priority }}">{{ ticket.priority | title }}</span>
+            </div>
+        </div>
+
+        <!-- Assignment Control -->
+        <div class="card mb-2">
+            <div class="card-header">Assignment</div>
+            <form method="POST" action="{{ url_for('admin.ticket_assign', ticket_id=ticket.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <select name="assigned_to" class="form-control mb-1">
+                    <option value="">Unassigned</option>
+                    {% for admin in admin_users %}
+                    <option value="{{ admin.id }}" {{ 'selected' if ticket.assigned_to_user_id == admin.id }}>
+                        {{ admin.full_name or admin.email }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-sm btn-secondary btn-full">Update Assignment</button>
+            </form>
+        </div>
+
+        <!-- Ticket Info -->
+        <div class="card">
+            <div class="card-header">Details</div>
+            <div class="admin-detail-row">
+                <span class="admin-detail-label">Category</span>
+                <span>{{ (ticket.category or 'General') | replace('_', ' ') | title }}</span>
+            </div>
+            <div class="admin-detail-row">
+                <span class="admin-detail-label">Site</span>
+                {% if site %}
+                    <span class="font-mono text-sm">/{{ site.site_slug }}/</span>
+                {% else %}
+                    <span class="text-tertiary">—</span>
+                {% endif %}
+            </div>
+            <div class="admin-detail-row">
+                <span class="admin-detail-label">Created</span>
+                <span class="text-sm">{{ ticket.created_at.strftime('%b %d, %Y %H:%M') if ticket.created_at else '' }}</span>
+            </div>
+            <div class="admin-detail-row">
+                <span class="admin-detail-label">Last Activity</span>
+                <span class="text-sm">{{ ticket.last_activity_at.strftime('%b %d, %Y %H:%M') if ticket.last_activity_at else '' }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-2">
+    <a href="{{ url_for('admin.ticket_list') }}" class="btn btn-ghost">← Back to Tickets</a>
+</div>
+{% endblock %}

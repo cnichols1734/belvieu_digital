@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Payment Successful — {{ g.site.display_name or g.workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="cta-page">
+    <svg class="cta-page-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--green-500);">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+
+    <h1>Payment successful!</h1>
+    <p>
+        Your subscription is being activated. This usually takes just a few seconds.
+        You'll be redirected to your dashboard shortly.
+    </p>
+
+    <div class="billing-processing" id="processing-indicator">
+        <div class="billing-spinner"></div>
+        <span class="text-sm text-muted">Setting things up...</span>
+    </div>
+
+    <a href="{{ url_for('portal.dashboard', site_slug=g.site.site_slug) }}" class="btn btn-primary btn-lg mt-3">
+        Go to dashboard
+    </a>
+
+    <p class="text-sm text-muted mt-3">
+        If you're not redirected, click the button above.
+    </p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Auto-redirect to dashboard after 5 seconds
+    // (webhook should have processed by then)
+    setTimeout(function() {
+        window.location.href = "{{ url_for('portal.dashboard', site_slug=g.site.site_slug) }}";
+    }, 5000);
+</script>
+{% endblock %}

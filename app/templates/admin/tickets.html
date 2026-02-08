@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}All Tickets — WaaS Portal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-row">
+        <div>
+            <h1>All Tickets</h1>
+            <p>Support tickets across all workspaces.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="admin-ticket-filters">
+    <div class="ticket-filters">
+        <a href="{{ url_for('admin.ticket_list') }}"
+           class="ticket-filter-tab {{ 'active' if not status_filter }}">All</a>
+        <a href="{{ url_for('admin.ticket_list', status='open') }}"
+           class="ticket-filter-tab {{ 'active' if status_filter == 'open' }}">Open</a>
+        <a href="{{ url_for('admin.ticket_list', status='in_progress') }}"
+           class="ticket-filter-tab {{ 'active' if status_filter == 'in_progress' }}">In Progress</a>
+        <a href="{{ url_for('admin.ticket_list', status='waiting_on_client') }}"
+           class="ticket-filter-tab {{ 'active' if status_filter == 'waiting_on_client' }}">Waiting</a>
+        <a href="{{ url_for('admin.ticket_list', status='done') }}"
+           class="ticket-filter-tab {{ 'active' if status_filter == 'done' }}">Done</a>
+    </div>
+
+    <div class="admin-assignee-filter">
+        <select class="form-control" style="width: auto; min-width: 160px;" onchange="filterByAssignee(this.value)">
+            <option value="">All assignees</option>
+            <option value="unassigned" {{ 'selected' if assignee_filter == 'unassigned' }}>Unassigned</option>
+            {% for admin in admin_users %}
+            <option value="{{ admin.id }}" {{ 'selected' if assignee_filter == admin.id }}>
+                {{ admin.full_name or admin.email }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+{% if tickets %}
+<div class="table-container">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Subject</th>
+                <th>Workspace</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Assigned To</th>
+                <th>Last Activity</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ticket in tickets %}
+            <tr>
+                <td>
+                    <a href="{{ url_for('admin.ticket_detail', ticket_id=ticket.id) }}" class="table-link">
+                        {{ ticket.subject }}
+                    </a>
+                    {% if ticket.category %}
+                    <div class="text-tertiary text-xs">{{ ticket.category | replace('_', ' ') | title }}</div>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if ticket.workspace %}
+                        <a href="{{ url_for('admin.workspace_detail', workspace_id=ticket.workspace_id) }}" class="text-sm">
+                            {{ ticket.workspace.name }}
+                        </a>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge badge-{{ ticket.status | replace('_', '-') }}">
+                        <span class="badge-dot"></span>
+                        {{ ticket.status | replace('_', ' ') | title }}
+                    </span>
+                </td>
+                <td>
+                    <span class="badge badge-{{ ticket.priority }}">
+                        {{ ticket.priority | title }}
+                    </span>
+                </td>
+                <td>
+                    {% if ticket.assigned_to %}
+                        <span class="text-sm">{{ ticket.assigned_to.full_name or ticket.assigned_to.email }}</span>
+                    {% else %}
+                        <span class="text-tertiary text-sm">Unassigned</span>
+                    {% endif %}
+                </td>
+                <td class="text-muted text-sm">
+                    {{ ticket.last_activity_at.strftime('%b %d, %H:%M') if ticket.last_activity_at else '' }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 00-2.15-1.588H6.911a2.25 2.25 0 00-2.15 1.588L2.35 13.177a2.25 2.25 0 00-.1.661z" />
+    </svg>
+    <h3>No tickets{% if status_filter %} with status "{{ status_filter | replace('_', ' ') | title }}"{% endif %}</h3>
+    <p>Tickets from clients will appear here.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterByAssignee(value) {
+    const url = new URL(window.location.href);
+    if (value) {
+        url.searchParams.set('assignee', value);
+    } else {
+        url.searchParams.delete('assignee');
+    }
+    window.location.href = url.toString();
+}
+</script>
+{% endblock %}

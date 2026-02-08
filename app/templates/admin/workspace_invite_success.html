@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Invite Generated — WaaS Portal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Invite Link Generated</h1>
+    <p>New invite for <strong>{{ workspace.name }}</strong></p>
+</div>
+
+<div class="card" style="max-width: 640px;">
+    <div class="card-header">Invite Link</div>
+    <p class="text-sm text-muted mb-1">Copy this link and send it to the client. It expires in 30 days.</p>
+
+    <div class="admin-invite-link-box">
+        <input type="text" class="form-control" id="invite-link-input"
+               value="{{ invite_link }}" readonly onclick="this.select()">
+        <button type="button" class="btn btn-primary btn-sm" onclick="copyInviteLink()">Copy</button>
+    </div>
+
+    {% if invite.email %}
+    <p class="form-hint mt-1">Locked to: {{ invite.email }}</p>
+    {% else %}
+    <p class="form-hint mt-1">Open invite — any email can use this link.</p>
+    {% endif %}
+
+    <hr class="divider">
+    <a href="{{ url_for('admin.workspace_detail', workspace_id=workspace.id) }}" class="btn btn-secondary">
+        ← Back to Workspace
+    </a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyInviteLink() {
+    const input = document.getElementById('invite-link-input');
+    input.select();
+    input.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(input.value).then(function() {
+        const btn = input.nextElementSibling;
+        btn.textContent = 'Copied!';
+        setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+    });
+}
+</script>
+{% endblock %}

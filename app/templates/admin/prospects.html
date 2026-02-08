@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Prospects — WaaS Portal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-row">
+        <div>
+            <h1>Prospects</h1>
+            <p>Your pipeline from discovery to conversion.</p>
+        </div>
+        <a href="{{ url_for('admin.prospect_new') }}" class="btn btn-primary">+ Add Prospect</a>
+    </div>
+</div>
+
+<!-- Status Filter Tabs -->
+<div class="ticket-filters">
+    <a href="{{ url_for('admin.prospect_list') }}"
+       class="ticket-filter-tab {{ 'active' if not status_filter }}">All</a>
+    {% for s in statuses %}
+    <a href="{{ url_for('admin.prospect_list', status=s) }}"
+       class="ticket-filter-tab {{ 'active' if status_filter == s }}">{{ s | replace('_', ' ') | title }}</a>
+    {% endfor %}
+</div>
+
+{% if prospects %}
+<div class="table-container">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Business</th>
+                <th>Source</th>
+                <th>Status</th>
+                <th>Contact</th>
+                <th>Demo URL</th>
+                <th>Updated</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prospect in prospects %}
+            <tr>
+                <td>
+                    <a href="{{ url_for('admin.prospect_detail', prospect_id=prospect.id) }}" class="table-link">
+                        {{ prospect.business_name }}
+                    </a>
+                </td>
+                <td>
+                    <span class="badge badge-{{ prospect.source }}">
+                        {{ prospect.source | replace('_', ' ') | title }}
+                    </span>
+                </td>
+                <td>
+                    <span class="badge badge-{{ prospect.status }}">
+                        <span class="badge-dot"></span>
+                        {{ prospect.status | replace('_', ' ') | title }}
+                    </span>
+                </td>
+                <td>
+                    {% if prospect.contact_name %}
+                        <span class="font-medium">{{ prospect.contact_name }}</span><br>
+                    {% endif %}
+                    {% if prospect.contact_email %}
+                        <span class="text-muted text-sm">{{ prospect.contact_email }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if prospect.demo_url %}
+                        <a href="{{ prospect.demo_url }}" target="_blank" class="text-sm">View</a>
+                    {% else %}
+                        <span class="text-tertiary text-sm">—</span>
+                    {% endif %}
+                </td>
+                <td class="text-muted text-sm">
+                    {{ prospect.updated_at.strftime('%b %d, %Y') if prospect.updated_at else '' }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+    </svg>
+    <h3>No prospects{% if status_filter %} with status "{{ status_filter | replace('_', ' ') | title }}"{% endif %}</h3>
+    <p>Start by finding businesses on Google Maps or Facebook that need a website.</p>
+    <a href="{{ url_for('admin.prospect_new') }}" class="btn btn-primary">+ Add Your First Prospect</a>
+</div>
+{% endif %}
+{% endblock %}

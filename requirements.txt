@@ -1,0 +1,26 @@
+# Core
+Flask
+Flask-Login
+Flask-WTF
+Flask-SQLAlchemy
+Flask-Migrate
+
+# Database
+psycopg2-binary
+SQLAlchemy
+
+# Payments
+stripe
+
+# Security / sanitization
+bleach
+Flask-Limiter
+
+# Environment
+python-dotenv
+
+# Production server
+gunicorn
+
+# Testing
+pytest

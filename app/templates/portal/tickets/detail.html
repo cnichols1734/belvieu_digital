@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}{{ ticket.subject }} — {{ g.site.display_name or g.workspace.name }}{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('portal.ticket_list', site_slug=g.site.site_slug) }}" class="back-link">
+    <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clip-rule="evenodd"/></svg>
+    Back to tickets
+</a>
+
+{# ── Ticket Header ── #}
+<div class="ticket-header">
+    <div class="ticket-header-top">
+        <h1 class="ticket-title">{{ ticket.subject }}</h1>
+        <div class="ticket-badges">
+            {% if ticket.status == 'open' %}
+                <span class="badge badge-open"><span class="badge-dot"></span> Open</span>
+            {% elif ticket.status == 'in_progress' %}
+                <span class="badge badge-in-progress"><span class="badge-dot"></span> In Progress</span>
+            {% elif ticket.status == 'waiting_on_client' %}
+                <span class="badge badge-waiting"><span class="badge-dot"></span> Waiting on You</span>
+            {% elif ticket.status == 'done' %}
+                <span class="badge badge-done"><span class="badge-dot"></span> Done</span>
+            {% endif %}
+
+            {% if ticket.priority == 'high' %}
+                <span class="badge badge-canceled"><span class="badge-dot"></span> High</span>
+            {% elif ticket.priority == 'normal' %}
+                <span class="badge badge-trialing"><span class="badge-dot"></span> Normal</span>
+            {% else %}
+                <span class="badge badge-paused"><span class="badge-dot"></span> Low</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="ticket-meta">
+        {% if ticket.category %}
+            <span>{{ ticket.category|replace('_', ' ')|capitalize }}</span>
+            <span class="ticket-meta-sep">&middot;</span>
+        {% endif %}
+        <span>Opened {{ ticket.created_at.strftime('%b %d, %Y at %I:%M %p') if ticket.created_at else '' }}</span>
+        {% if ticket.last_activity_at and ticket.last_activity_at != ticket.created_at %}
+            <span class="ticket-meta-sep">&middot;</span>
+            <span>Last activity {{ ticket.last_activity_at.strftime('%b %d, %Y') }}</span>
+        {% endif %}
+    </div>
+</div>
+
+{# ── Original Description ── #}
+<div class="ticket-thread">
+    <div class="ticket-message ticket-message-client">
+        <div class="ticket-message-header">
+            <div class="ticket-message-avatar">
+                {{ (ticket.author.full_name or ticket.author.email)[0]|upper }}
+            </div>
+            <div>
+                <span class="ticket-message-author">{{ ticket.author.full_name or ticket.author.email }}</span>
+                <span class="ticket-message-time">
+                    {{ ticket.created_at.strftime('%b %d, %Y at %I:%M %p') if ticket.created_at else '' }}
+                </span>
+            </div>
+        </div>
+        <div class="ticket-message-body">
+            {{ ticket.description }}
+        </div>
+    </div>
+
+    {# ── Thread Messages ── #}
+    {% for msg in messages %}
+    <div class="ticket-message {% if msg.author.is_admin %}ticket-message-admin{% else %}ticket-message-client{% endif %}">
+        <div class="ticket-message-header">
+            <div class="ticket-message-avatar {% if msg.author.is_admin %}ticket-message-avatar-admin{% endif %}">
+                {{ (msg.author.full_name or msg.author.email)[0]|upper }}
+            </div>
+            <div>
+                <span class="ticket-message-author">
+                    {{ msg.author.full_name or msg.author.email }}
+                    {% if msg.author.is_admin %}
+                        <span class="badge badge-demo" style="font-size:9px; padding:0.1rem 0.4rem; margin-left:0.25rem;">Support</span>
+                    {% endif %}
+                </span>
+                <span class="ticket-message-time">
+                    {{ msg.created_at.strftime('%b %d, %Y at %I:%M %p') if msg.created_at else '' }}
+                </span>
+            </div>
+        </div>
+        <div class="ticket-message-body">
+            {{ msg.message }}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{# ── Reply Form ── #}
+{% if g.access_level == 'full' and ticket.status != 'done' %}
+<div class="ticket-reply">
+    <form method="POST" action="{{ url_for('portal.ticket_reply', site_slug=g.site.site_slug, ticket_id=ticket.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+            <label for="message">Reply</label>
+            <textarea id="message" name="message" class="form-control"
+                      placeholder="Type your reply..."
+                      rows="4" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Send reply</button>
+    </form>
+</div>
+{% elif ticket.status == 'done' %}
+<div class="ticket-reply-closed">
+    <p>This ticket has been resolved. If you need further help, please create a new ticket.</p>
+    <a href="{{ url_for('portal.ticket_new', site_slug=g.site.site_slug) }}" class="btn btn-secondary btn-sm">New ticket</a>
+</div>
+{% elif g.access_level != 'full' %}
+<div class="ticket-reply-closed">
+    <p>An active subscription is required to reply to tickets.</p>
+</div>
+{% endif %}
+{% endblock %}

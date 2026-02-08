@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Billing — {{ g.site.display_name or g.workspace.name }}{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('portal.dashboard', site_slug=g.site.site_slug) }}" class="back-link">
+    <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clip-rule="evenodd"/></svg>
+    Back to dashboard
+</a>
+
+<div class="page-header">
+    <h1>Billing</h1>
+    <p>Manage your subscription and payment details.</p>
+</div>
+
+{# ── Past Due Warning ── #}
+{% if g.access_level == 'read_only' %}
+<div class="alert alert-warning">
+    <svg class="alert-icon" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+    </svg>
+    <div>
+        <strong>Payment failed</strong> — please update your payment method to keep your subscription active.
+    </div>
+</div>
+{% endif %}
+
+{# ── Subscription Card ── #}
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header">Current Plan</div>
+
+    {% if g.subscription %}
+        <div class="subscription-card" style="border: none; box-shadow: none; padding: 0; margin-bottom: 0;">
+            <div class="subscription-info">
+                <div>
+                    <div class="subscription-plan">
+                        {{ g.subscription.plan|capitalize if g.subscription.plan else 'Subscription' }}
+
+                        {% if g.subscription.status == 'active' %}
+                            <span class="badge badge-active"><span class="badge-dot"></span> Active</span>
+                        {% elif g.subscription.status == 'trialing' %}
+                            <span class="badge badge-trialing"><span class="badge-dot"></span> Trial</span>
+                        {% elif g.subscription.status == 'past_due' %}
+                            <span class="badge badge-past-due"><span class="badge-dot"></span> Past Due</span>
+                        {% elif g.subscription.status == 'canceled' %}
+                            <span class="badge badge-canceled"><span class="badge-dot"></span> Canceled</span>
+                        {% endif %}
+                    </div>
+                    <div class="subscription-renewal">
+                        {% if g.subscription.cancel_at_period_end %}
+                            Cancels {{ g.subscription.current_period_end.strftime('%b %d, %Y') if g.subscription.current_period_end else 'soon' }}
+                        {% elif g.subscription.current_period_end %}
+                            Renews {{ g.subscription.current_period_end.strftime('%b %d, %Y') }}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <hr class="divider">
+
+        <form method="POST" action="{{ url_for('billing.customer_portal', site_slug=g.site.site_slug) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-secondary">
+                <svg style="width:14px;height:14px;" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M11 17a1 1 0 001.447.894l4-2A1 1 0 0017 15V9.236a1 1 0 00-1.447-.894l-4 2a1 1 0 00-.553.894V17zM15.211 6.276a1 1 0 000-1.788l-4.764-2.382a1 1 0 00-.894 0L4.789 4.488a1 1 0 000 1.788l4.764 2.382a1 1 0 00.894 0l4.764-2.382zM4.447 8.342A1 1 0 003 9.236V15a1 1 0 00.553.894l4 2A1 1 0 009 17v-5.764a1 1 0 00-.553-.894l-4-2z"/>
+                </svg>
+                Manage billing on Stripe
+            </button>
+        </form>
+        <p class="text-sm text-muted mt-1">Update payment method, view invoices, or cancel your subscription.</p>
+
+    {% else %}
+        <div class="empty-state" style="padding: 2rem 1rem;">
+            <p style="margin-bottom: 1rem;">No active subscription.</p>
+            <a href="{{ url_for('billing.billing_overview', site_slug=g.site.site_slug) }}" class="btn btn-primary">Choose a plan</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
