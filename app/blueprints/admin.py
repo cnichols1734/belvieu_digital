@@ -132,11 +132,19 @@ def prospect_list():
 
     prospects = query.order_by(Prospect.updated_at.desc()).all()
 
+    # Bulk edit usage for converted prospects
+    converted_ws_ids = [
+        p.workspace_id for p in prospects
+        if p.status == "converted" and p.workspace_id
+    ]
+    edit_usage_map = ticket_service.get_monthly_edit_usage_bulk(converted_ws_ids)
+
     return render_template(
         "admin/prospects.html",
         prospects=prospects,
         status_filter=status_filter,
         statuses=Prospect.STATUSES,
+        edit_usage_map=edit_usage_map,
     )
 
 
@@ -198,11 +206,20 @@ def prospect_new():
 @admin_bp.route("/prospects/<prospect_id>", methods=["GET"])
 @admin_required
 def prospect_detail(prospect_id):
-    """Prospect detail: info, notes, status, demo URL."""
+    """Prospect detail: info, notes, status, demo URL.
+
+    Converted prospects redirect to their workspace page so everything
+    is managed in one place.
+    """
     prospect = db.session.get(Prospect, prospect_id)
     if prospect is None:
         flash("Prospect not found.", "error")
         return redirect(url_for("admin.prospect_list"))
+
+    # Converted prospects → go to workspace page (unified view)
+    if prospect.status == "converted" and prospect.workspace_id:
+        return redirect(url_for("admin.workspace_detail",
+                                workspace_id=prospect.workspace_id))
 
     return render_template("admin/prospect_detail.html", prospect=prospect)
 
@@ -385,14 +402,24 @@ def workspace_list():
             .order_by(WorkspaceInvite.created_at.desc())
             .first()
         )
+        member_count = ws.members.count()
         workspace_data.append({
             "workspace": ws,
             "site": site,
             "subscription": sub,
             "latest_invite": latest_invite,
+            "member_count": member_count,
         })
 
-    return render_template("admin/workspaces.html", workspace_data=workspace_data)
+    # Bulk edit usage for all workspaces
+    ws_ids = [ws.id for ws in workspaces]
+    edit_usage_map = ticket_service.get_monthly_edit_usage_bulk(ws_ids)
+
+    return render_template(
+        "admin/workspaces.html",
+        workspace_data=workspace_data,
+        edit_usage_map=edit_usage_map,
+    )
 
 
 @admin_bp.route("/workspaces/<workspace_id>")
@@ -446,6 +473,11 @@ def workspace_detail(workspace_id):
     if workspace.prospect_id:
         prospect = db.session.get(Prospect, workspace.prospect_id)
 
+    # Monthly edit usage
+    edit_usage = ticket_service.get_monthly_edit_usage(workspace_id)
+
+    active_tab = request.args.get("tab", "overview")
+
     return render_template(
         "admin/workspace_detail.html",
         workspace=workspace,
@@ -457,7 +489,148 @@ def workspace_detail(workspace_id):
         tickets=tickets,
         prospect=prospect,
         settings=workspace.settings,
+        active_tab=active_tab,
+        edit_usage=edit_usage,
     )
+
+
+@admin_bp.route("/workspaces/<workspace_id>/settings", methods=["POST"])
+@admin_required
+def workspace_settings_update(workspace_id):
+    """Update workspace settings (brand, limits, notifications, features)."""
+    workspace = db.session.get(Workspace, workspace_id)
+    if workspace is None:
+        flash("Workspace not found.", "error")
+        return redirect(url_for("admin.workspace_list"))
+
+    settings = workspace.settings
+    if settings is None:
+        settings = WorkspaceSettings(workspace_id=workspace.id)
+        db.session.add(settings)
+
+    # Brand color
+    brand_color = request.form.get("brand_color", "").strip() or None
+    if brand_color and not brand_color.startswith("#"):
+        brand_color = "#" + brand_color
+    settings.brand_color = brand_color
+
+    # Update allowance
+    allowance_str = request.form.get("update_allowance", "").strip()
+    if allowance_str == "" or allowance_str.lower() == "unlimited":
+        settings.update_allowance = None
+    else:
+        try:
+            settings.update_allowance = int(allowance_str)
+        except ValueError:
+            settings.update_allowance = None
+
+    # Plan features (stored in JSON)
+    plan_features = settings.plan_features or {}
+    plan_features["support_priority"] = request.form.get("support_priority", "normal")
+    plan_features["maintenance_mode"] = request.form.get("maintenance_mode") == "on"
+    plan_features["contact_form"] = request.form.get("contact_form") == "on"
+    plan_features["analytics_enabled"] = request.form.get("analytics_enabled") == "on"
+    settings.plan_features = plan_features
+
+    # Notification prefs (stored in JSON)
+    notification_prefs = {}
+    notification_prefs["ticket_replies"] = request.form.get("notify_ticket_replies") == "on"
+    notification_prefs["billing_events"] = request.form.get("notify_billing_events") == "on"
+    notification_prefs["site_updates"] = request.form.get("notify_site_updates") == "on"
+    settings.notification_prefs = notification_prefs
+
+    # Force SQLAlchemy to detect JSON changes
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(settings, "plan_features")
+    flag_modified(settings, "notification_prefs")
+
+    audit = AuditEvent(
+        workspace_id=workspace.id,
+        actor_user_id=current_user.id,
+        action="workspace.settings_updated",
+        metadata_={
+            "brand_color": settings.brand_color,
+            "update_allowance": settings.update_allowance,
+            "support_priority": plan_features.get("support_priority"),
+        },
+    )
+    db.session.add(audit)
+    db.session.commit()
+
+    flash("Workspace settings updated.", "success")
+    return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id, tab="settings"))
+
+
+@admin_bp.route("/workspaces/<workspace_id>/site", methods=["POST"])
+@admin_required
+def workspace_site_update(workspace_id):
+    """Update site settings (display name, published URL, custom domain) from workspace page."""
+    workspace = db.session.get(Workspace, workspace_id)
+    if workspace is None:
+        flash("Workspace not found.", "error")
+        return redirect(url_for("admin.workspace_list"))
+
+    site = workspace.sites.first()
+    if site is None:
+        flash("No site found for this workspace.", "error")
+        return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id))
+
+    site.display_name = request.form.get("display_name", site.display_name).strip()
+    site.published_url = request.form.get("published_url", "").strip() or None
+    site.custom_domain = request.form.get("custom_domain", "").strip() or None
+
+    audit = AuditEvent(
+        workspace_id=workspace.id,
+        actor_user_id=current_user.id,
+        action="site.settings_updated",
+        metadata_={
+            "site_id": site.id,
+            "display_name": site.display_name,
+            "published_url": site.published_url,
+            "custom_domain": site.custom_domain,
+        },
+    )
+    db.session.add(audit)
+    db.session.commit()
+
+    flash("Site settings updated.", "success")
+    return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id, tab="site"))
+
+
+@admin_bp.route("/workspaces/<workspace_id>/prospect", methods=["POST"])
+@admin_required
+def workspace_prospect_update(workspace_id):
+    """Update prospect/business info from within the workspace page."""
+    workspace = db.session.get(Workspace, workspace_id)
+    if workspace is None:
+        flash("Workspace not found.", "error")
+        return redirect(url_for("admin.workspace_list"))
+
+    prospect = None
+    if workspace.prospect_id:
+        prospect = db.session.get(Prospect, workspace.prospect_id)
+
+    if prospect is None:
+        flash("No prospect record linked to this workspace.", "error")
+        return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id))
+
+    # Update prospect fields
+    prospect.business_name = request.form.get("business_name", prospect.business_name).strip()
+    prospect.contact_name = request.form.get("contact_name", "").strip() or None
+    prospect.contact_email = request.form.get("contact_email", "").strip() or None
+    prospect.contact_phone = request.form.get("contact_phone", "").strip() or None
+    prospect.source = request.form.get("source", prospect.source).strip()
+    prospect.source_url = request.form.get("source_url", "").strip() or None
+    prospect.notes = request.form.get("notes", "").strip() or None
+    prospect.demo_url = request.form.get("demo_url", "").strip() or None
+
+    # Also update workspace name to match business name
+    workspace.name = prospect.business_name
+
+    db.session.commit()
+
+    flash("Business info updated.", "success")
+    return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id, tab="business"))
 
 
 @admin_bp.route("/workspaces/<workspace_id>/invite", methods=["POST"])
@@ -562,6 +735,9 @@ def ticket_detail(ticket_id):
     workspace = db.session.get(Workspace, ticket.workspace_id)
     site = db.session.get(Site, ticket.site_id)
 
+    # Monthly edit usage for this workspace
+    edit_usage = ticket_service.get_monthly_edit_usage(ticket.workspace_id)
+
     return render_template(
         "admin/ticket_detail.html",
         ticket=ticket,
@@ -569,6 +745,7 @@ def ticket_detail(ticket_id):
         admin_users=admin_users,
         workspace=workspace,
         site=site,
+        edit_usage=edit_usage,
     )
 
 
@@ -639,6 +816,23 @@ def ticket_assign(ticket_id):
             flash(f"Ticket assigned to {assignee.full_name or assignee.email}.", "success")
         else:
             flash("Ticket unassigned.", "success")
+    except ValueError as e:
+        flash(str(e), "error")
+
+    return redirect(url_for("admin.ticket_detail", ticket_id=ticket_id))
+
+
+@admin_bp.route("/tickets/<ticket_id>/category", methods=["POST"])
+@admin_required
+def ticket_category(ticket_id):
+    """Change ticket category (e.g. to content_update before marking done)."""
+    new_category = request.form.get("category", "").strip() or None
+
+    try:
+        ticket_service.update_category(ticket_id, new_category, current_user.id)
+        db.session.commit()
+        label = (new_category or "General").replace("_", " ").title()
+        flash(f"Category changed to '{label}'.", "success")
     except ValueError as e:
         flash(str(e), "error")
 

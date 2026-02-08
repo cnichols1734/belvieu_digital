@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Workspaces — WaaS Portal{% endblock %}
+{% block title %}Workspaces — Belvieu Digital{% endblock %}
 
 {% block content %}
 <div class="page-header">
@@ -19,6 +19,8 @@
             <tr>
                 <th>Workspace</th>
                 <th>Site Slug</th>
+                <th>Members</th>
+                <th>Edits</th>
                 <th>Plan</th>
                 <th>Subscription</th>
                 <th>Invite</th>
@@ -43,6 +45,27 @@
                         <span class="font-mono text-sm">/{{ wd.site.site_slug }}/</span>
                     {% else %}
                         <span class="text-tertiary">—</span>
+                    {% endif %}
+                </td>
+                <td class="text-sm">
+                    {{ wd.member_count }}
+                    <span class="text-tertiary">{{ 'user' if wd.member_count == 1 else 'users' }}</span>
+                </td>
+                <td>
+                    {% set eu = edit_usage_map.get(wd.workspace.id, {}) %}
+                    {% if eu.get('limit') is not none %}
+                        <span class="edit-usage-compact">
+                            <span class="font-medium" {% if eu.get('used', 0) >= eu.get('limit', 0) %}style="color: var(--red-600);"{% endif %}>
+                                {{ eu.get('used', 0) }}/{{ eu.get('limit') }}
+                            </span>
+                            <span class="edit-usage-bar-container">
+                                <span class="edit-usage-bar" style="width: {{ [eu.get('used', 0) / eu.get('limit', 1) * 100, 100] | min }}%;
+                                     {% if eu.get('used', 0) >= eu.get('limit', 0) %}background: var(--red-500);{% endif %}"></span>
+                            </span>
+                        </span>
+                    {% else %}
+                        <span class="text-sm">{{ eu.get('used', 0) }}</span>
+                        <span class="text-tertiary text-xs">∞</span>
                     {% endif %}
                 </td>
                 <td>

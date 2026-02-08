@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Prospects — WaaS Portal{% endblock %}
+{% block title %}Prospects — Belvieu Digital{% endblock %}
 
 {% block content %}
 <div class="page-header">
@@ -31,6 +31,7 @@
                 <th>Business</th>
                 <th>Source</th>
                 <th>Status</th>
+                <th>Edits</th>
                 <th>Contact</th>
                 <th>Demo URL</th>
                 <th>Updated</th>
@@ -40,9 +41,15 @@
             {% for prospect in prospects %}
             <tr>
                 <td>
-                    <a href="{{ url_for('admin.prospect_detail', prospect_id=prospect.id) }}" class="table-link">
-                        {{ prospect.business_name }}
-                    </a>
+                    {% if prospect.status == 'converted' and prospect.workspace_id %}
+                        <a href="{{ url_for('admin.workspace_detail', workspace_id=prospect.workspace_id) }}" class="table-link">
+                            {{ prospect.business_name }}
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('admin.prospect_detail', prospect_id=prospect.id) }}" class="table-link">
+                            {{ prospect.business_name }}
+                        </a>
+                    {% endif %}
                 </td>
                 <td>
                     <span class="badge badge-{{ prospect.source }}">
@@ -54,6 +61,27 @@
                         <span class="badge-dot"></span>
                         {{ prospect.status | replace('_', ' ') | title }}
                     </span>
+                </td>
+                <td>
+                    {% if prospect.status == 'converted' and prospect.workspace_id %}
+                        {% set eu = edit_usage_map.get(prospect.workspace_id, {}) %}
+                        {% if eu.get('limit') is not none %}
+                            <span class="edit-usage-compact">
+                                <span class="font-medium" {% if eu.get('used', 0) >= eu.get('limit', 0) %}style="color: var(--red-600);"{% endif %}>
+                                    {{ eu.get('used', 0) }}/{{ eu.get('limit') }}
+                                </span>
+                                <span class="edit-usage-bar-container">
+                                    <span class="edit-usage-bar" style="width: {{ [eu.get('used', 0) / eu.get('limit', 1) * 100, 100] | min }}%;
+                                         {% if eu.get('used', 0) >= eu.get('limit', 0) %}background: var(--red-500);{% endif %}"></span>
+                                </span>
+                            </span>
+                        {% else %}
+                            <span class="text-sm">{{ eu.get('used', 0) }}</span>
+                            <span class="text-tertiary text-xs">∞</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-tertiary text-sm">—</span>
+                    {% endif %}
                 </td>
                 <td>
                     {% if prospect.contact_name %}

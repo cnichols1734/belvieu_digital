@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ prospect.business_name }} — WaaS Portal{% endblock %}
+{% block title %}{{ prospect.business_name }} — Belvieu Digital{% endblock %}
 
 {% block content %}
 <div class="page-header">
@@ -24,7 +24,7 @@
                 </a>
             {% endif %}
             {% if prospect.status == 'converted' and prospect.workspace_id %}
-                <a href="{{ url_for('admin.workspace_detail', workspace_id=prospect.workspace_id) }}" class="btn btn-secondary">
+                <a href="{{ url_for('admin.workspace_detail', workspace_id=prospect.workspace_id) }}" class="btn btn-primary">
                     View Workspace
                 </a>
             {% endif %}
@@ -33,77 +33,163 @@
 </div>
 
 <div class="content-grid">
-    <!-- Prospect Info (Editable) -->
-    <div class="card">
-        <div class="card-header">Prospect Details</div>
-        <form method="POST" action="{{ url_for('admin.prospect_update', prospect_id=prospect.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-            <div class="form-group">
-                <label for="business_name">Business Name</label>
-                <input type="text" id="business_name" name="business_name" class="form-control"
-                       value="{{ prospect.business_name }}" required>
+    <!-- Main Column -->
+    <div>
+        {# ── View Mode (default) ── #}
+        <div class="card" id="prospect-view">
+            <div class="card-header">
+                <span>Prospect Details</span>
+                {% if prospect.status != 'converted' %}
+                <button class="btn btn-sm btn-secondary" onclick="toggleProspectEdit(true)">Edit</button>
+                {% endif %}
             </div>
 
-            <div class="form-group">
-                <label for="contact_name">Contact Name</label>
-                <input type="text" id="contact_name" name="contact_name" class="form-control"
-                       value="{{ prospect.contact_name or '' }}">
+            <div class="admin-detail-row">
+                <span class="admin-detail-label">Business Name</span>
+                <span class="font-medium">{{ prospect.business_name }}</span>
+            </div>
+            <div class="admin-detail-row">
+                <span class="admin-detail-label">Contact Name</span>
+                <span>{{ prospect.contact_name or '—' }}</span>
+            </div>
+            <div class="admin-detail-row">
+                <span class="admin-detail-label">Contact Email</span>
+                {% if prospect.contact_email %}
+                    <a href="mailto:{{ prospect.contact_email }}">{{ prospect.contact_email }}</a>
+                {% else %}
+                    <span class="text-tertiary">—</span>
+                {% endif %}
+            </div>
+            <div class="admin-detail-row">
+                <span class="admin-detail-label">Contact Phone</span>
+                {% if prospect.contact_phone %}
+                    <a href="tel:{{ prospect.contact_phone }}">{{ prospect.contact_phone }}</a>
+                {% else %}
+                    <span class="text-tertiary">—</span>
+                {% endif %}
             </div>
 
-            <div class="form-group">
-                <label for="contact_email">Contact Email</label>
-                <input type="email" id="contact_email" name="contact_email" class="form-control"
-                       value="{{ prospect.contact_email or '' }}">
+            <hr class="divider">
+
+            <div class="admin-detail-row">
+                <span class="admin-detail-label">Source</span>
+                <span class="badge badge-{{ prospect.source }}">{{ prospect.source | replace('_', ' ') | title }}</span>
+            </div>
+            <div class="admin-detail-row">
+                <span class="admin-detail-label">Source URL</span>
+                {% if prospect.source_url %}
+                    <a href="{{ prospect.source_url }}" target="_blank">{{ prospect.source_url }} ↗</a>
+                {% else %}
+                    <span class="text-tertiary">—</span>
+                {% endif %}
+            </div>
+            <div class="admin-detail-row">
+                <span class="admin-detail-label">Demo URL</span>
+                {% if prospect.demo_url %}
+                    <a href="{{ prospect.demo_url }}" target="_blank">{{ prospect.demo_url }} ↗</a>
+                {% else %}
+                    <span class="text-tertiary">—</span>
+                {% endif %}
+            </div>
+            <div class="admin-detail-row">
+                <span class="admin-detail-label">Status</span>
+                <span class="badge badge-{{ prospect.status }}">
+                    <span class="badge-dot"></span>
+                    {{ prospect.status | replace('_', ' ') | title }}
+                </span>
             </div>
 
-            <div class="form-group">
-                <label for="contact_phone">Contact Phone</label>
-                <input type="text" id="contact_phone" name="contact_phone" class="form-control"
-                       value="{{ prospect.contact_phone or '' }}">
+            {% if prospect.notes %}
+            <hr class="divider">
+            <div>
+                <span class="admin-detail-label" style="display: block; margin-bottom: 0.25rem;">Notes</span>
+                <p class="text-sm" style="white-space: pre-wrap; color: var(--color-text-secondary);">{{ prospect.notes }}</p>
             </div>
+            {% endif %}
+        </div>
 
-            <div class="form-group">
-                <label for="source">Source</label>
-                <select id="source" name="source" class="form-control">
-                    <option value="google_maps" {{ 'selected' if prospect.source == 'google_maps' }}>Google Maps</option>
-                    <option value="facebook" {{ 'selected' if prospect.source == 'facebook' }}>Facebook</option>
-                    <option value="referral" {{ 'selected' if prospect.source == 'referral' }}>Referral</option>
-                    <option value="other" {{ 'selected' if prospect.source == 'other' }}>Other</option>
-                </select>
+        {# ── Edit Mode ── #}
+        <div class="card" id="prospect-edit" style="display: none;">
+            <div class="card-header">
+                <span>Edit Prospect</span>
+                <button class="btn btn-sm btn-ghost" onclick="toggleProspectEdit(false)">Cancel</button>
             </div>
+            <form method="POST" action="{{ url_for('admin.prospect_update', prospect_id=prospect.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-            <div class="form-group">
-                <label for="source_url">Source URL</label>
-                <input type="url" id="source_url" name="source_url" class="form-control"
-                       value="{{ prospect.source_url or '' }}">
-            </div>
+                <div class="form-group">
+                    <label for="business_name">Business Name</label>
+                    <input type="text" id="business_name" name="business_name" class="form-control"
+                           value="{{ prospect.business_name }}" required>
+                </div>
 
-            <div class="form-group">
-                <label for="demo_url">Demo URL</label>
-                <input type="url" id="demo_url" name="demo_url" class="form-control"
-                       value="{{ prospect.demo_url or '' }}">
-            </div>
+                <div class="content-grid">
+                    <div class="form-group">
+                        <label for="contact_name">Contact Name</label>
+                        <input type="text" id="contact_name" name="contact_name" class="form-control"
+                               value="{{ prospect.contact_name or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact_email">Contact Email</label>
+                        <input type="email" id="contact_email" name="contact_email" class="form-control"
+                               value="{{ prospect.contact_email or '' }}">
+                    </div>
+                </div>
 
-            <div class="form-group">
-                <label for="status">Status</label>
-                <select id="status" name="status" class="form-control">
-                    {% for s in ['researching', 'site_built', 'pitched', 'converted', 'declined'] %}
-                    <option value="{{ s }}" {{ 'selected' if prospect.status == s }}>{{ s | replace('_', ' ') | title }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+                <div class="content-grid">
+                    <div class="form-group">
+                        <label for="contact_phone">Contact Phone</label>
+                        <input type="text" id="contact_phone" name="contact_phone" class="form-control"
+                               value="{{ prospect.contact_phone or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="source">Source</label>
+                        <select id="source" name="source" class="form-control">
+                            <option value="google_maps" {{ 'selected' if prospect.source == 'google_maps' }}>Google Maps</option>
+                            <option value="facebook" {{ 'selected' if prospect.source == 'facebook' }}>Facebook</option>
+                            <option value="referral" {{ 'selected' if prospect.source == 'referral' }}>Referral</option>
+                            <option value="other" {{ 'selected' if prospect.source == 'other' }}>Other</option>
+                        </select>
+                    </div>
+                </div>
 
-            <div class="form-group">
-                <label for="notes">Notes</label>
-                <textarea id="notes" name="notes" class="form-control" rows="5">{{ prospect.notes or '' }}</textarea>
-            </div>
+                <div class="form-group">
+                    <label for="source_url">Source URL</label>
+                    <input type="url" id="source_url" name="source_url" class="form-control"
+                           value="{{ prospect.source_url or '' }}"
+                           placeholder="Link to Google Maps or Facebook listing">
+                </div>
 
-            <button type="submit" class="btn btn-primary">Save Changes</button>
-        </form>
+                <div class="form-group">
+                    <label for="demo_url">Demo URL</label>
+                    <input type="url" id="demo_url" name="demo_url" class="form-control"
+                           value="{{ prospect.demo_url or '' }}"
+                           placeholder="e.g. https://business.yourdomain.dev">
+                </div>
+
+                <div class="form-group">
+                    <label for="status">Status</label>
+                    <select id="status" name="status" class="form-control">
+                        {% for s in ['researching', 'site_built', 'pitched', 'converted', 'declined'] %}
+                        <option value="{{ s }}" {{ 'selected' if prospect.status == s }}>{{ s | replace('_', ' ') | title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">Notes</label>
+                    <textarea id="notes" name="notes" class="form-control" rows="4">{{ prospect.notes or '' }}</textarea>
+                </div>
+
+                <div class="flex gap-1">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" class="btn btn-ghost" onclick="toggleProspectEdit(false)">Cancel</button>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <!-- Quick Info Sidebar -->
+    <!-- Sidebar -->
     <div>
         <!-- Demo Site Card -->
         {% if prospect.demo_url %}
@@ -127,8 +213,9 @@
         {% endif %}
 
         <!-- Status Actions -->
+        {% if prospect.status != 'converted' and prospect.status != 'declined' %}
         <div class="card mb-2">
-            <div class="card-header">Quick Status</div>
+            <div class="card-header">Quick Actions</div>
             <div class="admin-status-actions">
                 {% if prospect.status == 'researching' %}
                     <form method="POST" action="{{ url_for('admin.prospect_update', prospect_id=prospect.id) }}" style="display:inline;">
@@ -153,17 +240,16 @@
                         Convert to Client
                     </a>
                 {% endif %}
-                {% if prospect.status in ('researching', 'site_built', 'pitched') %}
-                    <form method="POST" action="{{ url_for('admin.prospect_update', prospect_id=prospect.id) }}" style="display:inline;">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="status" value="declined">
-                        <input type="hidden" name="business_name" value="{{ prospect.business_name }}">
-                        <input type="hidden" name="source" value="{{ prospect.source }}">
-                        <button type="submit" class="btn btn-sm btn-ghost btn-full">Mark as Declined</button>
-                    </form>
-                {% endif %}
+                <form method="POST" action="{{ url_for('admin.prospect_update', prospect_id=prospect.id) }}" style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="status" value="declined">
+                    <input type="hidden" name="business_name" value="{{ prospect.business_name }}">
+                    <input type="hidden" name="source" value="{{ prospect.source }}">
+                    <button type="submit" class="btn btn-sm btn-ghost btn-full">Mark as Declined</button>
+                </form>
             </div>
         </div>
+        {% endif %}
 
         <!-- Converted Info -->
         {% if prospect.status == 'converted' and prospect.workspace %}
@@ -183,4 +269,13 @@
 <div class="mt-2">
     <a href="{{ url_for('admin.prospect_list') }}" class="btn btn-ghost">← Back to Prospects</a>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleProspectEdit(show) {
+    document.getElementById('prospect-view').style.display = show ? 'none' : 'block';
+    document.getElementById('prospect-edit').style.display = show ? 'block' : 'none';
+}
+</script>
 {% endblock %}

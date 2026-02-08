@@ -1,28 +1,28 @@
 /* ──────────────────────────────────────────────
-   WaaS Portal — Design System
-   Inspired by Stripe: clean, spacious, precise.
+   Belvieu Digital — Client Portal Design System
+   Clean, minimal, black & white.
    ────────────────────────────────────────────── */
 
 /* --- Design Tokens --- */
 :root {
     /* Neutral palette */
-    --gray-50:  #f9fafb;
-    --gray-100: #f3f4f6;
-    --gray-200: #e5e7eb;
-    --gray-300: #d1d5db;
-    --gray-400: #9ca3af;
-    --gray-500: #6b7280;
-    --gray-600: #4b5563;
-    --gray-700: #374151;
-    --gray-800: #1f2937;
-    --gray-900: #111827;
+    --gray-50:  #fafafa;
+    --gray-100: #f0f0f0;
+    --gray-200: #e0e0e0;
+    --gray-300: #c4c4c4;
+    --gray-400: #999999;
+    --gray-500: #737373;
+    --gray-600: #525252;
+    --gray-700: #3d3d3d;
+    --gray-800: #262626;
+    --gray-900: #171717;
 
-    /* Brand */
-    --indigo-50:  #eef2ff;
-    --indigo-100: #e0e7ff;
-    --indigo-500: #6366f1;
-    --indigo-600: #4f46e5;
-    --indigo-700: #4338ca;
+    /* Brand — near-black primary */
+    --indigo-50:  #f5f5f5;
+    --indigo-100: #e8e8e8;
+    --indigo-500: #3d3d3d;
+    --indigo-600: #171717;
+    --indigo-700: #0a0a0a;
 
     /* Semantic */
     --green-50:  #f0fdf4;
@@ -45,32 +45,32 @@
     --blue-700:  #1d4ed8;
 
     /* Surfaces */
-    --color-bg:       #f6f8fa;
+    --color-bg:       #fafafa;
     --color-surface:  #ffffff;
     --color-text:     var(--gray-900);
     --color-text-secondary: var(--gray-500);
     --color-text-tertiary:  var(--gray-400);
     --color-border:   var(--gray-200);
     --color-border-light: var(--gray-100);
-    --color-primary:  var(--indigo-600);
-    --color-primary-hover: var(--indigo-700);
-    --color-primary-light: var(--indigo-50);
+    --color-primary:  var(--gray-900);
+    --color-primary-hover: #0a0a0a;
+    --color-primary-light: var(--gray-50);
 
     /* Radii */
     --radius-sm: 6px;
     --radius:    8px;
-    --radius-lg: 12px;
-    --radius-xl: 16px;
+    --radius-lg: 10px;
+    --radius-xl: 12px;
 
-    /* Shadows — layered for depth */
-    --shadow-xs:  0 1px 2px 0 rgba(0, 0, 0, 0.04);
-    --shadow-sm:  0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
-    --shadow-md:  0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
-    --shadow-lg:  0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
-    --shadow-ring: 0 0 0 3px rgba(99, 102, 241, 0.12);
+    /* Shadows — minimal, border-driven design */
+    --shadow-xs:  none;
+    --shadow-sm:  none;
+    --shadow-md:  none;
+    --shadow-lg:  none;
+    --shadow-ring: 0 0 0 3px rgba(0, 0, 0, 0.06);
 
     /* Typography */
-    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
 
     /* Layout */
@@ -106,20 +106,20 @@ body {
 }
 
 a {
-    color: var(--color-primary);
+    color: var(--gray-700);
     text-decoration: none;
     transition: color var(--transition);
 }
 a:hover {
-    color: var(--color-primary-hover);
+    color: var(--gray-900);
     text-decoration: underline;
 }
 
 img { max-width: 100%; }
 
 ::selection {
-    background: var(--indigo-100);
-    color: var(--indigo-700);
+    background: var(--gray-200);
+    color: var(--gray-900);
 }
 
 /* ─── Navigation ─── */
@@ -345,18 +345,15 @@ img { max-width: 100%; }
     white-space: nowrap;
 }
 .btn:hover { text-decoration: none; }
-.btn:active { transform: scale(0.98); }
 
 .btn-primary {
     background: var(--color-primary);
     color: #fff;
     border-color: var(--color-primary);
-    box-shadow: var(--shadow-xs);
 }
 .btn-primary:hover {
     background: var(--color-primary-hover);
     border-color: var(--color-primary-hover);
-    box-shadow: var(--shadow-sm);
     color: #fff;
 }
 
@@ -364,7 +361,6 @@ img { max-width: 100%; }
     background: var(--color-surface);
     color: var(--color-text);
     border-color: var(--color-border);
-    box-shadow: var(--shadow-xs);
 }
 .btn-secondary:hover {
     background: var(--gray-50);
@@ -419,7 +415,6 @@ img { max-width: 100%; }
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     padding: 1.5rem;
-    box-shadow: var(--shadow-sm);
 }
 
 .card-compact {
@@ -478,13 +473,6 @@ img { max-width: 100%; }
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     padding: 1.25rem 1.5rem;
-    box-shadow: var(--shadow-xs);
-    transition: box-shadow var(--transition), border-color var(--transition);
-}
-
-.stat-card:hover {
-    box-shadow: var(--shadow-sm);
-    border-color: var(--gray-300);
 }
 
 .stat-label {
@@ -626,8 +614,8 @@ select.form-control {
 .badge-paused    { background: var(--gray-100); color: var(--gray-600); }
 .badge-paused .badge-dot { background: var(--gray-400); }
 
-.badge-demo      { background: var(--indigo-50); color: var(--indigo-700); }
-.badge-demo .badge-dot { background: var(--indigo-500); }
+.badge-demo      { background: var(--gray-100); color: var(--gray-700); }
+.badge-demo .badge-dot { background: var(--gray-500); }
 
 .badge-open      { background: var(--blue-50); color: var(--blue-700); }
 .badge-open .badge-dot { background: var(--blue-500); }
@@ -641,13 +629,89 @@ select.form-control {
 .badge-waiting   { background: var(--gray-100); color: var(--gray-600); }
 .badge-waiting .badge-dot { background: var(--gray-400); }
 
+.badge-owner     { background: var(--gray-900); color: #fff; }
+.badge-member    { background: var(--gray-100); color: var(--gray-700); }
+
+/* ─── Edit Usage Bar ─── */
+.edit-usage-bar-container {
+    width: 100%;
+    height: 6px;
+    background: var(--gray-100);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.edit-usage-bar {
+    height: 100%;
+    background: var(--gray-900);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+    min-width: 0;
+}
+.edit-usage-compact {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+}
+.edit-usage-compact .edit-usage-bar-container {
+    width: 48px;
+    height: 4px;
+}
+
+/* ─── Admin Tabs ─── */
+.admin-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 1.5rem;
+}
+.admin-tab {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+.admin-tab:hover {
+    color: var(--color-text);
+}
+.admin-tab.active {
+    color: var(--gray-900);
+    border-bottom-color: var(--gray-900);
+}
+.admin-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--gray-900);
+    border-radius: 9px;
+    margin-left: 0.35rem;
+    vertical-align: middle;
+}
+.admin-tab-panel {
+    display: none;
+}
+.admin-tab-panel.active {
+    display: block;
+}
+
 /* ─── Tables ─── */
 .table-container {
     overflow-x: auto;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     background: var(--color-surface);
-    box-shadow: var(--shadow-xs);
 }
 
 .table {
@@ -697,7 +761,7 @@ select.form-control {
     transition: color var(--transition);
 }
 .table-link:hover {
-    color: var(--color-primary);
+    color: var(--gray-600);
     text-decoration: none;
 }
 
@@ -783,23 +847,11 @@ select.form-control {
     padding: 2rem;
     text-align: center;
     position: relative;
-    box-shadow: var(--shadow-sm);
-    transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s;
-}
-
-.pricing-card:hover {
-    box-shadow: var(--shadow-md);
-    border-color: var(--gray-300);
-    transform: translateY(-2px);
 }
 
 .pricing-card-featured {
     border-color: var(--color-primary);
-    box-shadow: var(--shadow-md), 0 0 0 1px var(--color-primary);
-}
-.pricing-card-featured:hover {
-    box-shadow: var(--shadow-lg), 0 0 0 1px var(--color-primary);
-    border-color: var(--color-primary);
+    border-width: 2px;
 }
 
 .pricing-badge {
@@ -926,13 +978,7 @@ select.form-control {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-xs);
     margin-bottom: 1.5rem;
-    transition: box-shadow var(--transition);
-}
-
-.subscription-card:hover {
-    box-shadow: var(--shadow-sm);
 }
 
 .subscription-info {
@@ -987,7 +1033,7 @@ select.form-control {
 }
 
 .auth-footer a {
-    color: var(--color-primary);
+    color: var(--gray-700);
     text-decoration: none;
     font-weight: 500;
 }
@@ -1017,7 +1063,7 @@ select.form-control {
 .check-label input[type="checkbox"] {
     width: 15px;
     height: 15px;
-    accent-color: var(--color-primary);
+    accent-color: var(--gray-900);
     border-radius: 3px;
     cursor: pointer;
 }
@@ -1031,10 +1077,7 @@ select.form-control {
 .error-page-code {
     font-size: 80px;
     font-weight: 700;
-    background: linear-gradient(135deg, var(--indigo-500), var(--indigo-700));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--gray-900);
     margin-bottom: 0.75rem;
     letter-spacing: -0.04em;
     line-height: 1;
@@ -1088,7 +1131,7 @@ select.form-control {
     text-decoration: none;
 }
 .ticket-row-link:hover .ticket-row-subject {
-    color: var(--color-primary);
+    color: var(--gray-600);
 }
 
 /* ─── Ticket Filters ─── */
@@ -1115,8 +1158,8 @@ select.form-control {
     text-decoration: none;
 }
 .ticket-filter-tab.active {
-    color: var(--color-primary);
-    border-bottom-color: var(--color-primary);
+    color: var(--gray-900);
+    border-bottom-color: var(--gray-900);
 }
 
 /* ─── Ticket Detail ─── */
@@ -1166,15 +1209,10 @@ select.form-control {
     border-radius: var(--radius-lg);
     padding: 1.25rem;
     margin-bottom: 0.75rem;
-    transition: box-shadow var(--transition);
-}
-
-.ticket-message:hover {
-    box-shadow: var(--shadow-xs);
 }
 
 .ticket-message-admin {
-    border-left: 3px solid var(--indigo-500);
+    border-left: 3px solid var(--gray-900);
 }
 
 .ticket-message-header {
@@ -1199,8 +1237,8 @@ select.form-control {
 }
 
 .ticket-message-avatar-admin {
-    background: var(--indigo-100);
-    color: var(--indigo-700);
+    background: var(--gray-900);
+    color: #fff;
 }
 
 .ticket-message-author {
@@ -1403,8 +1441,8 @@ select.form-control {
 .badge-researching  { background: var(--blue-50); color: var(--blue-700); }
 .badge-researching .badge-dot { background: var(--blue-500); }
 
-.badge-site_built   { background: var(--indigo-50); color: var(--indigo-700); }
-.badge-site_built .badge-dot { background: var(--indigo-500); }
+.badge-site_built   { background: var(--blue-50); color: var(--blue-700); }
+.badge-site_built .badge-dot { background: var(--blue-500); }
 
 .badge-pitched      { background: var(--yellow-50); color: var(--yellow-700); }
 .badge-pitched .badge-dot { background: var(--yellow-500); }
@@ -1417,7 +1455,7 @@ select.form-control {
 
 /* ─── Admin Badge Colors for Source ─── */
 .badge-google_maps  { background: var(--blue-50); color: var(--blue-700); }
-.badge-facebook     { background: var(--indigo-50); color: var(--indigo-700); }
+.badge-facebook     { background: var(--blue-50); color: var(--blue-700); }
 .badge-referral     { background: var(--green-50); color: var(--green-700); }
 .badge-other        { background: var(--gray-100); color: var(--gray-600); }
 
@@ -1428,7 +1466,7 @@ select.form-control {
 
 /* ─── Admin Badge Colors for Plans ─── */
 .badge-basic   { background: var(--blue-50); color: var(--blue-700); }
-.badge-pro     { background: var(--indigo-50); color: var(--indigo-700); }
+.badge-pro     { background: var(--gray-900); color: #fff; }
 
 /* font-mono utility */
 .font-mono     { font-family: var(--font-mono); }
@@ -1446,7 +1484,7 @@ select.form-control {
     width: 20px;
     height: 20px;
     border: 2px solid var(--color-border);
-    border-top-color: var(--color-primary);
+    border-top-color: var(--gray-900);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }

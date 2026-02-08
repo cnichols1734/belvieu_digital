@@ -108,6 +108,22 @@
         </div>
     </div>
 
+    {# ── Team Members ── #}
+    <div class="card">
+        <div class="card-header">Team ({{ team_members | length }})</div>
+        {% for tm in team_members %}
+        <div class="site-info-item" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div style="font-weight: 500;">{{ tm.user.full_name or tm.user.email }}</div>
+                {% if tm.user.full_name %}
+                    <div class="text-muted text-sm">{{ tm.user.email }}</div>
+                {% endif %}
+            </div>
+            <span class="badge badge-{{ tm.member.role }}">{{ tm.member.role | title }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
     {# ── Recent Tickets ── #}
     <div class="card">
         <div class="card-header">

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ workspace.name }} — WaaS Portal{% endblock %}
+{% block title %}{{ workspace.name }} — Belvieu Digital{% endblock %}
 
 {% block content %}
 <div class="page-header">
@@ -8,52 +8,498 @@
         <div>
             <h1>{{ workspace.name }}</h1>
             <p>
-                {% if prospect %}
-                    Converted from <a href="{{ url_for('admin.prospect_detail', prospect_id=prospect.id) }}">{{ prospect.business_name }}</a>
-                    <span class="text-tertiary">·</span>
+                {% if site %}
+                    <span class="badge badge-{{ site.status }}">
+                        <span class="badge-dot"></span>
+                        {{ site.status | title }}
+                    </span>
+                    <span class="text-tertiary" style="margin: 0 0.25rem;">·</span>
+                {% endif %}
+                {% if subscription %}
+                    <span class="badge badge-{{ subscription.status }}">
+                        <span class="badge-dot"></span>
+                        {{ subscription.status | replace('_', ' ') | title }}
+                    </span>
+                    <span class="text-tertiary" style="margin: 0 0.25rem;">·</span>
                 {% endif %}
                 Created {{ workspace.created_at.strftime('%b %d, %Y') if workspace.created_at else '' }}
             </p>
         </div>
+        {% if site and site.published_url %}
+        <a href="{{ site.published_url }}" target="_blank" class="btn btn-secondary">
+            View Live Site ↗
+        </a>
+        {% endif %}
     </div>
 </div>
 
-<div class="content-grid">
-    <!-- Left Column -->
-    <div>
-        <!-- Site Info -->
-        {% if site %}
-        <div class="card mb-2">
+{# ── Tab Navigation ── #}
+<div class="admin-tabs">
+    <button class="admin-tab {{ 'active' if active_tab == 'overview' }}" onclick="switchTab('overview')">Overview</button>
+    <button class="admin-tab {{ 'active' if active_tab == 'business' }}" onclick="switchTab('business')">Business Info</button>
+    <button class="admin-tab {{ 'active' if active_tab == 'site' }}" onclick="switchTab('site')">Site Settings</button>
+    <button class="admin-tab {{ 'active' if active_tab == 'settings' }}" onclick="switchTab('settings')">Settings</button>
+    <button class="admin-tab {{ 'active' if active_tab == 'invites' }}" onclick="switchTab('invites')">
+        Invites
+        {% set pending_count = invites | rejectattr('is_used') | rejectattr('is_expired') | list | length if invites else 0 %}
+        {% if pending_count > 0 %}
+            <span class="admin-tab-badge">{{ pending_count }}</span>
+        {% endif %}
+    </button>
+</div>
+
+{# ═══════════════════════════════════════════════
+   TAB 1: OVERVIEW
+   ═══════════════════════════════════════════════ #}
+<div class="admin-tab-panel {{ 'active' if active_tab == 'overview' }}" id="tab-overview">
+    <div class="content-grid">
+        <!-- Left Column -->
+        <div>
+            <!-- Site Info -->
+            {% if site %}
+            <div class="card mb-2">
+                <div class="card-header">
+                    <span>Site</span>
+                    <span class="badge badge-{{ site.status }}">
+                        <span class="badge-dot"></span>
+                        {{ site.status | title }}
+                    </span>
+                </div>
+
+                <div class="admin-detail-row">
+                    <span class="admin-detail-label">Slug</span>
+                    <span class="font-mono text-sm">/{{ site.site_slug }}/</span>
+                </div>
+                <div class="admin-detail-row">
+                    <span class="admin-detail-label">Display Name</span>
+                    <span>{{ site.display_name or '—' }}</span>
+                </div>
+                <div class="admin-detail-row">
+                    <span class="admin-detail-label">Published URL</span>
+                    {% if site.published_url %}
+                        <a href="{{ site.published_url }}" target="_blank">{{ site.published_url }}</a>
+                    {% else %}
+                        <span class="text-tertiary">—</span>
+                    {% endif %}
+                </div>
+                <div class="admin-detail-row">
+                    <span class="admin-detail-label">Custom Domain</span>
+                    {% if site.custom_domain %}
+                        <span>{{ site.custom_domain }}</span>
+                    {% else %}
+                        <button class="btn btn-sm btn-ghost" onclick="switchTab('site')" style="padding: 0; color: var(--color-primary);">+ Add domain</button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Monthly Edit Usage -->
+            <div class="card mb-2">
+                <div class="card-header">Monthly Edits</div>
+                {% if edit_usage.limit is not none %}
+                    <div class="edit-usage-bar-container" style="margin-bottom: 0.5rem;">
+                        <div class="edit-usage-bar" style="width: {{ [edit_usage.used / edit_usage.limit * 100, 100] | min }}%;
+                             {% if edit_usage.used >= edit_usage.limit %}background: var(--red-500);{% endif %}"></div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="font-medium">{{ edit_usage.used }} / {{ edit_usage.limit }}</span>
+                        <span class="text-sm text-muted">
+                            {% if edit_usage.used >= edit_usage.limit %}
+                                <span style="color: var(--red-600);">Allowance reached</span>
+                            {% else %}
+                                {{ edit_usage.limit - edit_usage.used }} remaining
+                            {% endif %}
+                        </span>
+                    </div>
+                {% else %}
+                    <div class="flex items-center justify-between">
+                        <span class="font-medium">{{ edit_usage.used }} edits this month</span>
+                        <span class="text-sm text-tertiary">Unlimited</span>
+                    </div>
+                {% endif %}
+                <div class="form-hint" style="margin-top: 0.5rem;">
+                    Counts content update tickets marked done this month. Resets on the 1st.
+                </div>
+            </div>
+
+            <!-- Members -->
+            <div class="card mb-2">
+                <div class="card-header">Members ({{ member_data | length }})</div>
+                {% for md in member_data %}
+                <div class="admin-detail-row" style="padding: 0.625rem 0;">
+                    <div>
+                        <span class="font-medium">{{ md.user.full_name or md.user.email }}</span>
+                        {% if md.user.is_admin %}
+                            <span class="badge badge-demo" style="margin-left: 0.25rem;">Admin</span>
+                        {% endif %}
+                        <br>
+                        <span class="text-muted text-sm">{{ md.user.email }}</span>
+                        <br>
+                        <span class="text-tertiary text-xs">
+                            Joined {{ md.member.created_at.strftime('%b %d, %Y') if md.member.created_at else '—' }}
+                        </span>
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="badge badge-{{ md.member.role }}">{{ md.member.role | title }}</span>
+                        <br>
+                        <span class="text-tertiary text-xs">
+                            {% if md.member.role == 'owner' %}Primary account holder{% else %}Team member{% endif %}
+                        </span>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted text-sm">No registered users yet. Generate an invite to get started.</p>
+                {% endfor %}
+            </div>
+
+            <!-- Recent Tickets -->
+            <div class="card">
+                <div class="card-header">
+                    <span>Recent Tickets</span>
+                    <a href="{{ url_for('admin.ticket_list') }}" class="btn btn-sm btn-ghost">View all</a>
+                </div>
+                {% if tickets %}
+                    {% for ticket in tickets %}
+                    <a href="{{ url_for('admin.ticket_detail', ticket_id=ticket.id) }}" class="ticket-row-link" style="padding: 0.5rem 0; border-bottom: 1px solid var(--color-border-light);">
+                        <div>
+                            <span class="ticket-row-subject">{{ ticket.subject }}</span>
+                            <div class="ticket-row-meta">{{ ticket.category or 'General' }} · {{ ticket.last_activity_at.strftime('%b %d') if ticket.last_activity_at else '' }}</div>
+                        </div>
+                        <span class="badge badge-{{ ticket.status | replace('_', '-') }}">
+                            <span class="badge-dot"></span>
+                            {{ ticket.status | replace('_', ' ') | title }}
+                        </span>
+                    </a>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-sm">No tickets yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div>
+            <!-- Subscription -->
+            <div class="card mb-2">
+                <div class="card-header">Subscription</div>
+                {% if subscription %}
+                    <div class="admin-detail-row">
+                        <span class="admin-detail-label">Plan</span>
+                        <span class="font-medium">{{ (subscription.plan or 'Unknown') | title }}</span>
+                    </div>
+                    <div class="admin-detail-row">
+                        <span class="admin-detail-label">Status</span>
+                        <span class="badge badge-{{ subscription.status }}">
+                            <span class="badge-dot"></span>
+                            {{ subscription.status | replace('_', ' ') | title }}
+                        </span>
+                    </div>
+                    <div class="admin-detail-row">
+                        <span class="admin-detail-label">Renewal</span>
+                        <span>{{ subscription.current_period_end.strftime('%b %d, %Y') if subscription.current_period_end else '—' }}</span>
+                    </div>
+                    {% if subscription.cancel_at_period_end %}
+                    <div class="alert alert-warning" style="margin-top: 0.75rem;">
+                        Cancels at end of current period
+                    </div>
+                    {% endif %}
+                    {% if billing_customer %}
+                    <hr class="divider">
+                    <a href="https://dashboard.stripe.com/test/customers/{{ billing_customer.stripe_customer_id }}" target="_blank" class="btn btn-sm btn-secondary btn-full">
+                        Open in Stripe ↗
+                    </a>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted text-sm">No subscription yet.</p>
+                {% endif %}
+            </div>
+
+            <!-- Quick Business Snapshot -->
+            {% if prospect %}
+            <div class="card mb-2">
+                <div class="card-header">
+                    <span>Business Snapshot</span>
+                    <button class="btn btn-sm btn-ghost" onclick="switchTab('business')">Edit</button>
+                </div>
+                <div class="admin-detail-row">
+                    <span class="admin-detail-label">Contact</span>
+                    <span>{{ prospect.contact_name or '—' }}</span>
+                </div>
+                {% if prospect.contact_email %}
+                <div class="admin-detail-row">
+                    <span class="admin-detail-label">Email</span>
+                    <span class="text-sm">{{ prospect.contact_email }}</span>
+                </div>
+                {% endif %}
+                {% if prospect.contact_phone %}
+                <div class="admin-detail-row">
+                    <span class="admin-detail-label">Phone</span>
+                    <span class="text-sm">{{ prospect.contact_phone }}</span>
+                </div>
+                {% endif %}
+                <div class="admin-detail-row">
+                    <span class="admin-detail-label">Source</span>
+                    <span class="badge badge-{{ prospect.source }}">{{ prospect.source | replace('_', ' ') | title }}</span>
+                </div>
+                {% if prospect.source_url %}
+                <div class="admin-detail-row">
+                    <span class="admin-detail-label">Listing</span>
+                    <a href="{{ prospect.source_url }}" target="_blank" class="text-sm">View ↗</a>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Settings Snapshot -->
+            {% if settings %}
+            <div class="card">
+                <div class="card-header">
+                    <span>Settings</span>
+                    <button class="btn btn-sm btn-ghost" onclick="switchTab('settings')">Edit</button>
+                </div>
+                <div class="admin-detail-row">
+                    <span class="admin-detail-label">Brand Color</span>
+                    <span>
+                        {% if settings.brand_color %}
+                            <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:{{ settings.brand_color }};vertical-align:middle;margin-right:0.25rem;border:1px solid var(--color-border);"></span>
+                            {{ settings.brand_color }}
+                        {% else %}
+                            <span class="text-tertiary">—</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="admin-detail-row">
+                    <span class="admin-detail-label">Update Allowance</span>
+                    <span>{{ settings.update_allowance if settings.update_allowance is not none else 'Unlimited' }}/mo</span>
+                </div>
+                <div class="admin-detail-row">
+                    <span class="admin-detail-label">Support</span>
+                    <span>{{ (settings.plan_features or {}).get('support_priority', 'normal') | title }}</span>
+                </div>
+                {% if (settings.plan_features or {}).get('maintenance_mode') %}
+                <div class="admin-detail-row">
+                    <span class="admin-detail-label">Maintenance</span>
+                    <span class="badge badge-past-due"><span class="badge-dot"></span> Active</span>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{# ═══════════════════════════════════════════════
+   TAB 2: BUSINESS INFO
+   ═══════════════════════════════════════════════ #}
+<div class="admin-tab-panel {{ 'active' if active_tab == 'business' }}" id="tab-business">
+    {% if prospect %}
+    <div style="max-width: 720px;">
+        {# ── View Mode ── #}
+        <div class="card" id="business-view">
             <div class="card-header">
-                <span>Site</span>
-                <span class="badge badge-{{ site.status }}">
-                    <span class="badge-dot"></span>
-                    {{ site.status | title }}
-                </span>
+                <span>Business Details</span>
+                <button class="btn btn-sm btn-secondary" onclick="toggleBusinessEdit(true)">Edit</button>
             </div>
 
             <div class="admin-detail-row">
-                <span class="admin-detail-label">Slug</span>
-                <span class="font-mono text-sm">/{{ site.site_slug }}/</span>
+                <span class="admin-detail-label">Business Name</span>
+                <span class="font-medium">{{ prospect.business_name }}</span>
             </div>
             <div class="admin-detail-row">
-                <span class="admin-detail-label">Display Name</span>
-                <span>{{ site.display_name or '—' }}</span>
+                <span class="admin-detail-label">Contact Name</span>
+                <span>{{ prospect.contact_name or '—' }}</span>
             </div>
             <div class="admin-detail-row">
-                <span class="admin-detail-label">Published URL</span>
-                {% if site.published_url %}
-                    <a href="{{ site.published_url }}" target="_blank">{{ site.published_url }}</a>
+                <span class="admin-detail-label">Contact Email</span>
+                <span>{{ prospect.contact_email or '—' }}</span>
+            </div>
+            <div class="admin-detail-row">
+                <span class="admin-detail-label">Contact Phone</span>
+                <span>{{ prospect.contact_phone or '—' }}</span>
+            </div>
+
+            <hr class="divider">
+
+            <div class="admin-detail-row">
+                <span class="admin-detail-label">Source</span>
+                <span class="badge badge-{{ prospect.source }}">{{ prospect.source | replace('_', ' ') | title }}</span>
+            </div>
+            <div class="admin-detail-row">
+                <span class="admin-detail-label">Source URL</span>
+                {% if prospect.source_url %}
+                    <a href="{{ prospect.source_url }}" target="_blank">{{ prospect.source_url }} ↗</a>
                 {% else %}
                     <span class="text-tertiary">—</span>
                 {% endif %}
             </div>
             <div class="admin-detail-row">
-                <span class="admin-detail-label">Custom Domain</span>
-                <span>{{ site.custom_domain or '—' }}</span>
+                <span class="admin-detail-label">Demo URL</span>
+                {% if prospect.demo_url %}
+                    <a href="{{ prospect.demo_url }}" target="_blank">{{ prospect.demo_url }} ↗</a>
+                {% else %}
+                    <span class="text-tertiary">—</span>
+                {% endif %}
             </div>
 
             <hr class="divider">
+
+            <div class="admin-detail-row">
+                <span class="admin-detail-label">Pipeline Status</span>
+                <span class="badge badge-{{ prospect.status }}">
+                    <span class="badge-dot"></span>
+                    {{ prospect.status | replace('_', ' ') | title }}
+                </span>
+            </div>
+            {% if prospect.notes %}
+            <div style="padding-top: 0.75rem;">
+                <span class="admin-detail-label" style="display: block; margin-bottom: 0.25rem;">Notes</span>
+                <p class="text-sm" style="white-space: pre-wrap; color: var(--color-text-secondary);">{{ prospect.notes }}</p>
+            </div>
+            {% endif %}
+            <div class="admin-detail-row">
+                <span class="admin-detail-label">Added</span>
+                <span class="text-sm text-muted">{{ prospect.created_at.strftime('%b %d, %Y') if prospect.created_at else '—' }}</span>
+            </div>
+        </div>
+
+        {# ── Edit Mode ── #}
+        <div class="card" id="business-edit" style="display: none;">
+            <div class="card-header">
+                <span>Edit Business Details</span>
+                <button class="btn btn-sm btn-ghost" onclick="toggleBusinessEdit(false)">Cancel</button>
+            </div>
+
+            <form method="POST" action="{{ url_for('admin.workspace_prospect_update', workspace_id=workspace.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-group">
+                    <label for="business_name">Business Name</label>
+                    <input type="text" id="business_name" name="business_name" class="form-control"
+                           value="{{ prospect.business_name }}" required>
+                </div>
+
+                <div class="content-grid">
+                    <div class="form-group">
+                        <label for="contact_name">Contact Name</label>
+                        <input type="text" id="contact_name" name="contact_name" class="form-control"
+                               value="{{ prospect.contact_name or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact_email">Contact Email</label>
+                        <input type="email" id="contact_email" name="contact_email" class="form-control"
+                               value="{{ prospect.contact_email or '' }}">
+                    </div>
+                </div>
+
+                <div class="content-grid">
+                    <div class="form-group">
+                        <label for="contact_phone">Contact Phone</label>
+                        <input type="text" id="contact_phone" name="contact_phone" class="form-control"
+                               value="{{ prospect.contact_phone or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="source">Source</label>
+                        <select id="source" name="source" class="form-control">
+                            <option value="google_maps" {{ 'selected' if prospect.source == 'google_maps' }}>Google Maps</option>
+                            <option value="facebook" {{ 'selected' if prospect.source == 'facebook' }}>Facebook</option>
+                            <option value="referral" {{ 'selected' if prospect.source == 'referral' }}>Referral</option>
+                            <option value="other" {{ 'selected' if prospect.source == 'other' }}>Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="source_url">Source URL</label>
+                    <input type="url" id="source_url" name="source_url" class="form-control"
+                           value="{{ prospect.source_url or '' }}"
+                           placeholder="Link to Google Maps or Facebook listing">
+                </div>
+
+                <div class="form-group">
+                    <label for="demo_url">Demo URL</label>
+                    <input type="url" id="demo_url" name="demo_url" class="form-control"
+                           value="{{ prospect.demo_url or '' }}"
+                           placeholder="e.g. https://business.yourdomain.dev">
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">Notes</label>
+                    <textarea id="notes" name="notes" class="form-control" rows="4">{{ prospect.notes or '' }}</textarea>
+                </div>
+
+                <div class="flex gap-1">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" class="btn btn-ghost" onclick="toggleBusinessEdit(false)">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="card" style="max-width: 720px;">
+        <div class="card-header">Business Info</div>
+        <p class="text-muted text-sm">This workspace was not created from a prospect record. No business info is linked.</p>
+    </div>
+    {% endif %}
+</div>
+
+{# ═══════════════════════════════════════════════
+   TAB 3: SITE SETTINGS
+   ═══════════════════════════════════════════════ #}
+<div class="admin-tab-panel {{ 'active' if active_tab == 'site' }}" id="tab-site">
+    {% if site %}
+    <div style="max-width: 720px;">
+        <div class="card mb-2">
+            <div class="card-header">Site Configuration</div>
+
+            <form method="POST" action="{{ url_for('admin.workspace_site_update', workspace_id=workspace.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-group">
+                    <label>Site Slug</label>
+                    <input type="text" class="form-control" value="/{{ site.site_slug }}/" disabled
+                           style="background: var(--gray-50); color: var(--color-text-secondary);">
+                    <div class="form-hint">The URL path cannot be changed after creation</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="display_name">Display Name</label>
+                    <input type="text" id="display_name" name="display_name" class="form-control"
+                           value="{{ site.display_name or '' }}"
+                           placeholder="e.g. Mario's Pizza">
+                    <div class="form-hint">The name shown in the client portal header</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="published_url">Published URL</label>
+                    <input type="url" id="published_url" name="published_url" class="form-control"
+                           value="{{ site.published_url or '' }}"
+                           placeholder="e.g. https://business.yourdomain.dev">
+                    <div class="form-hint">The Cloudflare .dev preview link for this site</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="custom_domain">Custom Domain</label>
+                    <input type="text" id="custom_domain" name="custom_domain" class="form-control"
+                           value="{{ site.custom_domain or '' }}"
+                           placeholder="e.g. mariospizza.com">
+                    <div class="form-hint">The client's purchased domain — set after DNS is configured</div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Save Site Settings</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span>Site Status</span>
+                <span class="badge badge-{{ site.status }}">
+                    <span class="badge-dot"></span>
+                    {{ site.status | title }}
+                </span>
+            </div>
+            <p class="text-sm text-muted" style="margin-bottom: 0.75rem;">
+                Override the site's display status. This is a presentation-only value — billing controls actual access.
+            </p>
             <form method="POST" action="{{ url_for('admin.site_status_override', site_id=site.id) }}" class="flex gap-1 items-center">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <select name="status" class="form-control" style="width: auto;">
@@ -64,102 +510,175 @@
                 <button type="submit" class="btn btn-sm btn-secondary">Override Status</button>
             </form>
         </div>
-        {% endif %}
-
-        <!-- Members -->
-        <div class="card mb-2">
-            <div class="card-header">Members ({{ member_data | length }})</div>
-            {% for md in member_data %}
-            <div class="admin-detail-row">
-                <div>
-                    <span class="font-medium">{{ md.user.full_name or md.user.email }}</span>
-                    {% if md.user.is_admin %}
-                        <span class="badge badge-demo" style="margin-left: 0.25rem;">Admin</span>
-                    {% endif %}
-                    <br>
-                    <span class="text-muted text-sm">{{ md.user.email }}</span>
-                </div>
-                <span class="badge badge-{{ md.member.role }}">{{ md.member.role | title }}</span>
-            </div>
-            {% endfor %}
-        </div>
-
-        <!-- Recent Tickets -->
-        <div class="card">
-            <div class="card-header">
-                <span>Tickets</span>
-                <a href="{{ url_for('admin.ticket_list') }}" class="btn btn-sm btn-ghost">View all</a>
-            </div>
-            {% if tickets %}
-                {% for ticket in tickets %}
-                <a href="{{ url_for('admin.ticket_detail', ticket_id=ticket.id) }}" class="ticket-row-link" style="padding: 0.5rem 0; border-bottom: 1px solid var(--color-border-light);">
-                    <div>
-                        <span class="ticket-row-subject">{{ ticket.subject }}</span>
-                        <div class="ticket-row-meta">{{ ticket.category or 'General' }} · {{ ticket.last_activity_at.strftime('%b %d') if ticket.last_activity_at else '' }}</div>
-                    </div>
-                    <span class="badge badge-{{ ticket.status | replace('_', '-') }}">
-                        <span class="badge-dot"></span>
-                        {{ ticket.status | replace('_', ' ') | title }}
-                    </span>
-                </a>
-                {% endfor %}
-            {% else %}
-                <p class="text-muted text-sm">No tickets yet.</p>
-            {% endif %}
-        </div>
     </div>
+    {% else %}
+    <div class="card" style="max-width: 720px;">
+        <div class="card-header">Site Settings</div>
+        <p class="text-muted text-sm">No site has been created for this workspace yet.</p>
+    </div>
+    {% endif %}
+</div>
 
-    <!-- Right Column -->
-    <div>
-        <!-- Subscription -->
+{# ═══════════════════════════════════════════════
+   TAB 4: SETTINGS
+   ═══════════════════════════════════════════════ #}
+<div class="admin-tab-panel {{ 'active' if active_tab == 'settings' }}" id="tab-settings">
+    <div style="max-width: 720px;">
+        <form method="POST" action="{{ url_for('admin.workspace_settings_update', workspace_id=workspace.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            {# ── Branding ── #}
+            <div class="card mb-2">
+                <div class="card-header">Branding</div>
+
+                <div class="form-group">
+                    <label for="brand_color">Brand Color</label>
+                    <div class="flex gap-1 items-center">
+                        <input type="color" id="brand_color_picker"
+                               value="{{ (settings.brand_color if settings and settings.brand_color) or '#111111' }}"
+                               style="width: 40px; height: 36px; padding: 2px; border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer;"
+                               onchange="document.getElementById('brand_color').value = this.value">
+                        <input type="text" id="brand_color" name="brand_color" class="form-control"
+                               value="{{ (settings.brand_color if settings and settings.brand_color) or '' }}"
+                               placeholder="#000000" style="max-width: 140px;"
+                               oninput="try { document.getElementById('brand_color_picker').value = this.value } catch(e) {}">
+                    </div>
+                    <div class="form-hint">Used for accent color in the client portal. Leave blank for default.</div>
+                </div>
+            </div>
+
+            {# ── Service Limits ── #}
+            <div class="card mb-2">
+                <div class="card-header">Service Limits</div>
+
+                <div class="form-group">
+                    <label for="update_allowance">Monthly Update Allowance</label>
+                    <input type="text" id="update_allowance" name="update_allowance" class="form-control"
+                           value="{{ settings.update_allowance if settings and settings.update_allowance is not none else '' }}"
+                           placeholder="Unlimited" style="max-width: 200px;">
+                    <div class="form-hint">Number of site edits per month. Leave blank for unlimited.</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="support_priority">Support Priority</label>
+                    <select id="support_priority" name="support_priority" class="form-control" style="max-width: 200px;">
+                        {% set current_priority = (settings.plan_features or {}).get('support_priority', 'normal') if settings else 'normal' %}
+                        <option value="normal" {{ 'selected' if current_priority == 'normal' }}>Normal</option>
+                        <option value="priority" {{ 'selected' if current_priority == 'priority' }}>Priority</option>
+                    </select>
+                    <div class="form-hint">Priority clients get faster ticket response times.</div>
+                </div>
+            </div>
+
+            {# ── Feature Flags ── #}
+            <div class="card mb-2">
+                <div class="card-header">Features</div>
+
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label class="check-label">
+                        <input type="checkbox" name="contact_form" {{ 'checked' if settings and (settings.plan_features or {}).get('contact_form') }}>
+                        <span>Contact Form</span>
+                    </label>
+                    <div class="form-hint" style="margin-left: 1.5rem;">Enable the contact form on the client's website.</div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label class="check-label">
+                        <input type="checkbox" name="analytics_enabled" {{ 'checked' if settings and (settings.plan_features or {}).get('analytics_enabled') }}>
+                        <span>Analytics Tracking</span>
+                    </label>
+                    <div class="form-hint" style="margin-left: 1.5rem;">Track page views and visitor analytics for this site.</div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="check-label">
+                        <input type="checkbox" name="maintenance_mode" {{ 'checked' if settings and (settings.plan_features or {}).get('maintenance_mode') }}>
+                        <span>Maintenance Mode</span>
+                    </label>
+                    <div class="form-hint" style="margin-left: 1.5rem;">Temporarily show a maintenance page instead of the live site.</div>
+                </div>
+            </div>
+
+            {# ── Notifications ── #}
+            <div class="card mb-2">
+                <div class="card-header">Client Notifications</div>
+                <p class="text-sm text-muted" style="margin-bottom: 0.75rem;">
+                    Control which email notifications are sent to the client.
+                </p>
+
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label class="check-label">
+                        <input type="checkbox" name="notify_ticket_replies" {{ 'checked' if not settings or (settings.notification_prefs or {}).get('ticket_replies', true) }}>
+                        <span>Ticket Replies</span>
+                    </label>
+                    <div class="form-hint" style="margin-left: 1.5rem;">Notify client when an admin replies to their support ticket.</div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label class="check-label">
+                        <input type="checkbox" name="notify_billing_events" {{ 'checked' if not settings or (settings.notification_prefs or {}).get('billing_events', true) }}>
+                        <span>Billing Events</span>
+                    </label>
+                    <div class="form-hint" style="margin-left: 1.5rem;">Payment confirmations, failed charges, and renewal reminders.</div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="check-label">
+                        <input type="checkbox" name="notify_site_updates" {{ 'checked' if not settings or (settings.notification_prefs or {}).get('site_updates', true) }}>
+                        <span>Site Updates</span>
+                    </label>
+                    <div class="form-hint" style="margin-left: 1.5rem;">Notify when changes are deployed to their website.</div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save Settings</button>
+        </form>
+    </div>
+</div>
+
+{# ═══════════════════════════════════════════════
+   TAB 5: INVITES
+   ═══════════════════════════════════════════════ #}
+<div class="admin-tab-panel {{ 'active' if active_tab == 'invites' }}" id="tab-invites">
+    <div style="max-width: 720px;">
+        <!-- Generate New Invite -->
         <div class="card mb-2">
-            <div class="card-header">Subscription</div>
-            {% if subscription %}
-                <div class="admin-detail-row">
-                    <span class="admin-detail-label">Plan</span>
-                    <span class="font-medium">{{ (subscription.plan or 'Unknown') | title }}</span>
+            <div class="card-header">Generate Invite</div>
+            <p class="text-sm text-muted" style="margin-bottom: 0.75rem;">
+                Create a new invite link for this client. The link expires in 30 days.
+            </p>
+            <form method="POST" action="{{ url_for('admin.workspace_invite', workspace_id=workspace.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label for="invite_email" class="text-sm">Lock to Email (optional)</label>
+                    <input type="email" id="invite_email" name="invite_email" class="form-control"
+                           placeholder="e.g. client@example.com">
+                    <div class="form-hint">If set, only this email address can use the invite link</div>
                 </div>
-                <div class="admin-detail-row">
-                    <span class="admin-detail-label">Status</span>
-                    <span class="badge badge-{{ subscription.status }}">
-                        <span class="badge-dot"></span>
-                        {{ subscription.status | replace('_', ' ') | title }}
-                    </span>
-                </div>
-                <div class="admin-detail-row">
-                    <span class="admin-detail-label">Renewal</span>
-                    <span>{{ subscription.current_period_end.strftime('%b %d, %Y') if subscription.current_period_end else '—' }}</span>
-                </div>
-                {% if subscription.cancel_at_period_end %}
-                <div class="alert alert-warning" style="margin-top: 0.75rem;">
-                    Cancels at end of current period
-                </div>
-                {% endif %}
-                {% if billing_customer %}
-                <hr class="divider">
-                <a href="https://dashboard.stripe.com/test/customers/{{ billing_customer.stripe_customer_id }}" target="_blank" class="btn btn-sm btn-secondary btn-full">
-                    Open in Stripe ↗
-                </a>
-                {% endif %}
-            {% else %}
-                <p class="text-muted text-sm">No subscription yet.</p>
-            {% endif %}
+                <button type="submit" class="btn btn-primary">Generate Invite Link</button>
+            </form>
         </div>
 
-        <!-- Invites -->
-        <div class="card mb-2">
-            <div class="card-header">Invite History</div>
+        <!-- Invite History -->
+        <div class="card">
+            <div class="card-header">Invite History ({{ invites | length }})</div>
             {% if invites %}
                 {% for inv in invites %}
-                <div class="admin-detail-row" style="padding: 0.5rem 0;">
+                <div class="admin-detail-row" style="padding: 0.625rem 0;">
                     <div>
-                        <span class="text-sm">
-                            {% if inv.email %}{{ inv.email }}{% else %}Open invite{% endif %}
+                        <span class="font-medium text-sm">
+                            {% if inv.email %}{{ inv.email }}{% else %}Open invite (any email){% endif %}
                         </span>
                         <br>
                         <span class="text-tertiary text-xs">
-                            {{ inv.created_at.strftime('%b %d, %Y') if inv.created_at else '' }}
+                            Created {{ inv.created_at.strftime('%b %d, %Y at %I:%M %p') if inv.created_at else '' }}
                         </span>
+                        {% if inv.used_at %}
+                        <br>
+                        <span class="text-tertiary text-xs">
+                            Used {{ inv.used_at.strftime('%b %d, %Y at %I:%M %p') }}
+                        </span>
+                        {% endif %}
                     </div>
                     {% if inv.is_used %}
                         <span class="badge badge-done">Used</span>
@@ -171,46 +690,47 @@
                 </div>
                 {% endfor %}
             {% else %}
-                <p class="text-muted text-sm">No invites generated.</p>
+                <p class="text-muted text-sm">No invites generated yet.</p>
             {% endif %}
-
-            <hr class="divider">
-            <form method="POST" action="{{ url_for('admin.workspace_invite', workspace_id=workspace.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="form-group" style="margin-bottom: 0.75rem;">
-                    <label for="invite_email" class="text-sm">Email (optional)</label>
-                    <input type="email" id="invite_email" name="invite_email" class="form-control"
-                           placeholder="Lock to specific email...">
-                </div>
-                <button type="submit" class="btn btn-sm btn-primary btn-full">Generate New Invite</button>
-            </form>
         </div>
-
-        <!-- Settings -->
-        {% if settings %}
-        <div class="card">
-            <div class="card-header">Workspace Settings</div>
-            <div class="admin-detail-row">
-                <span class="admin-detail-label">Brand Color</span>
-                <span>
-                    {% if settings.brand_color %}
-                        <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:{{ settings.brand_color }};vertical-align:middle;margin-right:0.25rem;border:1px solid var(--color-border);"></span>
-                        {{ settings.brand_color }}
-                    {% else %}
-                        <span class="text-tertiary">—</span>
-                    {% endif %}
-                </span>
-            </div>
-            <div class="admin-detail-row">
-                <span class="admin-detail-label">Update Allowance</span>
-                <span>{{ settings.update_allowance if settings.update_allowance is not none else 'Unlimited' }}</span>
-            </div>
-        </div>
-        {% endif %}
     </div>
 </div>
 
 <div class="mt-2">
     <a href="{{ url_for('admin.workspace_list') }}" class="btn btn-ghost">← Back to Workspaces</a>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function switchTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.admin-tab').forEach(function(btn) {
+        btn.classList.remove('active');
+    });
+    document.querySelectorAll('.admin-tab-panel').forEach(function(panel) {
+        panel.classList.remove('active');
+    });
+
+    // Activate selected
+    document.getElementById('tab-' + tabName).classList.add('active');
+
+    // Find the button — match by tab name in onclick
+    document.querySelectorAll('.admin-tab').forEach(function(btn) {
+        if (btn.getAttribute('onclick') === "switchTab('" + tabName + "')") {
+            btn.classList.add('active');
+        }
+    });
+
+    // Update URL without reload
+    var url = new URL(window.location);
+    url.searchParams.set('tab', tabName);
+    history.replaceState(null, '', url);
+}
+
+function toggleBusinessEdit(show) {
+    document.getElementById('business-view').style.display = show ? 'none' : 'block';
+    document.getElementById('business-edit').style.display = show ? 'block' : 'none';
+}
+</script>
 {% endblock %}

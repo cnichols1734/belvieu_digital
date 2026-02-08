@@ -111,11 +111,17 @@ def register():
         db.session.add(user)
         db.session.flush()  # get user.id
 
-        # --- Create workspace membership (role=owner) ---
+        # --- Create workspace membership ---
+        # First user gets "owner", subsequent users get "member"
+        existing_owner = WorkspaceMember.query.filter_by(
+            workspace_id=invite.workspace_id, role="owner"
+        ).first()
+        role = "member" if existing_owner else "owner"
+
         membership = WorkspaceMember(
             user_id=user.id,
             workspace_id=invite.workspace_id,
-            role="owner",
+            role=role,
         )
         db.session.add(membership)
 
