@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Invite Generated — WaaS Portal{% endblock %}
+{% block title %}Invite Generated — Belvieu Digital{% endblock %}
 
 {% block content %}
 <div class="page-header">
@@ -25,7 +25,7 @@
     {% endif %}
 
     <hr class="divider">
-    <a href="{{ url_for('admin.workspace_detail', workspace_id=workspace.id) }}" class="btn btn-secondary">
+    <a href="{{ url_for('admin.workspace_detail', workspace_id=workspace.id, tab='invites') }}" class="btn btn-secondary">
         ← Back to Workspace
     </a>
 </div>

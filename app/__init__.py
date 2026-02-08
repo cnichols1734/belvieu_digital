@@ -60,7 +60,7 @@ def create_app(config_name=None):
     # --- Root route ---
     @app.route("/")
     def index():
-        """Root URL — redirect to admin or login."""
+        """Root URL — landing page for visitors, redirect for logged-in users."""
         if current_user.is_authenticated:
             if current_user.is_admin:
                 return redirect(url_for("admin.dashboard"))
@@ -78,7 +78,7 @@ def create_app(config_name=None):
                     return redirect(url_for(
                         "portal.dashboard", site_slug=site.site_slug
                     ))
-        return redirect(url_for("auth.login"))
+        return render_template("landing.html")
 
     # --- Error handlers ---
     @app.errorhandler(403)
@@ -116,9 +116,9 @@ def create_app(config_name=None):
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' https://js.stripe.com; "
-            "style-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "img-src 'self' data:; "
-            "font-src 'self'; "
+            "font-src 'self' https://fonts.gstatic.com; "
             "connect-src 'self' https://api.stripe.com; "
             "frame-src https://js.stripe.com https://hooks.stripe.com; "
             "base-uri 'self'; "

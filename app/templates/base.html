@@ -3,16 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}WaaS Portal{% endblock %}</title>
+    <title>{% block title %}Belvieu Digital — Client Portal{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block head %}{% endblock %}
 </head>
 <body>
     <nav class="nav">
         <div class="nav-inner">
-            <a href="/" class="nav-brand">
-                <span class="nav-brand-icon">W</span>
-                <span class="nav-brand-text">WaaS Portal</span>
+            <a href="{% if g.site is defined and g.site %}{{ url_for('portal.dashboard', site_slug=g.site.site_slug) }}{% elif current_user.is_authenticated and current_user.is_admin %}{{ url_for('admin.dashboard') }}{% else %}/{% endif %}" class="nav-brand">
+                <span class="nav-brand-icon">B</span>
+                <span class="nav-brand-text">Belvieu Digital</span>
             </a>
             <div class="nav-links">
                 {% if current_user.is_authenticated %}
@@ -66,7 +69,7 @@
     </main>
 
     <footer class="footer">
-        <p>&copy; 2026 WaaS Portal</p>
+        <p>&copy; 2026 Belvieu Digital</p>
     </footer>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>

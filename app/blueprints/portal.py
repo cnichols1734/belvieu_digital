@@ -24,6 +24,8 @@ from flask_login import current_user
 from app.decorators import login_required_for_site
 from app.extensions import db
 from app.models.ticket import Ticket
+from app.models.workspace import WorkspaceMember
+from app.models.user import User
 from app.services import ticket_service
 
 portal_bp = Blueprint("portal", __name__)
@@ -68,9 +70,18 @@ def dashboard(site_slug):
         .all()
     )
 
+    # Workspace team members
+    members = WorkspaceMember.query.filter_by(workspace_id=g.workspace_id).all()
+    team_members = []
+    for m in members:
+        user = db.session.get(User, m.user_id)
+        if user:
+            team_members.append({"user": user, "member": m})
+
     return render_template(
         "portal/dashboard.html",
         recent_tickets=recent_tickets,
+        team_members=team_members,
     )
 
 

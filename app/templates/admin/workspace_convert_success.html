@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Client Created — WaaS Portal{% endblock %}
+{% block title %}Client Created — Belvieu Digital{% endblock %}
 
 {% block content %}
 <div class="cta-page">
@@ -57,8 +57,8 @@
     <hr class="divider">
 
     <div class="flex gap-1">
-        <a href="{{ url_for('admin.workspace_detail', workspace_id=workspace.id) }}" class="btn btn-secondary">
-            View Workspace
+        <a href="{{ url_for('admin.workspace_detail', workspace_id=workspace.id) }}" class="btn btn-primary">
+            Go to Workspace
         </a>
         <a href="{{ url_for('admin.prospect_list') }}" class="btn btn-ghost">
             Back to Prospects

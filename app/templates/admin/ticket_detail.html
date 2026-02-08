@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ ticket.subject }} — Admin — WaaS Portal{% endblock %}
+{% block title %}{{ ticket.subject }} — Admin — Belvieu Digital{% endblock %}
 
 {% block content %}
 <!-- Ticket Header -->
@@ -142,13 +142,55 @@
             </form>
         </div>
 
+        <!-- Category Control -->
+        <div class="card mb-2">
+            <div class="card-header">Category</div>
+            <form method="POST" action="{{ url_for('admin.ticket_category', ticket_id=ticket.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <select name="category" class="form-control mb-1">
+                    <option value="" {{ 'selected' if not ticket.category }}>General</option>
+                    <option value="content_update" {{ 'selected' if ticket.category == 'content_update' }}>Content Update</option>
+                    <option value="bug" {{ 'selected' if ticket.category == 'bug' }}>Bug</option>
+                    <option value="question" {{ 'selected' if ticket.category == 'question' }}>Question</option>
+                </select>
+                <button type="submit" class="btn btn-sm btn-secondary btn-full">Update Category</button>
+            </form>
+            {% if ticket.category == 'content_update' %}
+            <div class="form-hint mt-1" style="color: var(--gray-600);">
+                This ticket counts toward the monthly edit allowance when marked as done.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Monthly Edit Usage -->
+        <div class="card mb-2">
+            <div class="card-header">Monthly Edits</div>
+            <div style="padding: 0.25rem 0;">
+                {% if edit_usage.limit is not none %}
+                    <div class="edit-usage-bar-container">
+                        <div class="edit-usage-bar" style="width: {{ [edit_usage.used / edit_usage.limit * 100, 100] | min }}%;
+                             {% if edit_usage.used >= edit_usage.limit %}background: var(--red-500);{% endif %}"></div>
+                    </div>
+                    <div class="flex items-center justify-between" style="margin-top: 0.375rem;">
+                        <span class="text-sm font-medium">{{ edit_usage.used }}/{{ edit_usage.limit }} used</span>
+                        <span class="text-xs text-tertiary">
+                            {% if edit_usage.used >= edit_usage.limit %}
+                                Allowance reached
+                            {% else %}
+                                {{ edit_usage.limit - edit_usage.used }} remaining
+                            {% endif %}
+                        </span>
+                    </div>
+                {% else %}
+                    <span class="text-sm">{{ edit_usage.used }} edits</span>
+                    <span class="text-tertiary text-xs" style="margin-left: 0.25rem;">· Unlimited</span>
+                {% endif %}
+            </div>
+        </div>
+
         <!-- Ticket Info -->
         <div class="card">
             <div class="card-header">Details</div>
-            <div class="admin-detail-row">
-                <span class="admin-detail-label">Category</span>
-                <span>{{ (ticket.category or 'General') | replace('_', ' ') | title }}</span>
-            </div>
             <div class="admin-detail-row">
                 <span class="admin-detail-label">Site</span>
                 {% if site %}

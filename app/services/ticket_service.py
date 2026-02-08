@@ -284,6 +284,131 @@ def get_ticket_with_messages(ticket_id, include_internal=False):
     return ticket, messages
 
 
+def get_monthly_edit_usage(workspace_id):
+    """Count completed content_update tickets for the current calendar month.
+
+    Returns:
+        dict with keys:
+            used  – number of content_update tickets marked done this month
+            limit – monthly allowance (None = unlimited)
+    """
+    from app.models.workspace import Workspace, WorkspaceSettings
+
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    used = (
+        Ticket.query
+        .filter(
+            Ticket.workspace_id == workspace_id,
+            Ticket.category == "content_update",
+            Ticket.status == "done",
+            Ticket.updated_at >= month_start,
+        )
+        .count()
+    )
+
+    # Get the workspace's update allowance
+    settings = WorkspaceSettings.query.filter_by(workspace_id=workspace_id).first()
+    limit = settings.update_allowance if settings else None
+
+    return {"used": used, "limit": limit}
+
+
+def get_monthly_edit_usage_bulk(workspace_ids):
+    """Count completed content_update tickets for multiple workspaces in the current month.
+
+    Returns:
+        dict mapping workspace_id -> {"used": int, "limit": int|None}
+    """
+    from app.models.workspace import WorkspaceSettings
+
+    if not workspace_ids:
+        return {}
+
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    # Count done content_update tickets per workspace this month
+    from sqlalchemy import func
+    rows = (
+        db.session.query(Ticket.workspace_id, func.count(Ticket.id))
+        .filter(
+            Ticket.workspace_id.in_(workspace_ids),
+            Ticket.category == "content_update",
+            Ticket.status == "done",
+            Ticket.updated_at >= month_start,
+        )
+        .group_by(Ticket.workspace_id)
+        .all()
+    )
+    usage_map = {ws_id: count for ws_id, count in rows}
+
+    # Get allowances
+    settings_rows = (
+        WorkspaceSettings.query
+        .filter(WorkspaceSettings.workspace_id.in_(workspace_ids))
+        .all()
+    )
+    allowance_map = {s.workspace_id: s.update_allowance for s in settings_rows}
+
+    result = {}
+    for ws_id in workspace_ids:
+        result[ws_id] = {
+            "used": usage_map.get(ws_id, 0),
+            "limit": allowance_map.get(ws_id),
+        }
+    return result
+
+
+def update_category(ticket_id, new_category, actor_user_id):
+    """Change a ticket's category.
+
+    Args:
+        ticket_id: Ticket UUID string.
+        new_category: New category string (must be in Ticket.CATEGORIES) or None.
+        actor_user_id: User performing the change.
+
+    Returns:
+        The updated Ticket.
+
+    Raises:
+        ValueError: If ticket not found or category invalid.
+    """
+    ticket = db.session.get(Ticket, ticket_id)
+    if ticket is None:
+        raise ValueError(f"Ticket {ticket_id} not found.")
+
+    if new_category and new_category not in Ticket.CATEGORIES:
+        raise ValueError(
+            f"Invalid category '{new_category}'. "
+            f"Must be one of: {', '.join(Ticket.CATEGORIES)}"
+        )
+
+    old_category = ticket.category
+    ticket.category = new_category or None
+
+    now = datetime.now(timezone.utc)
+    ticket.updated_at = now
+    db.session.flush()
+
+    # Audit log
+    audit = AuditEvent(
+        workspace_id=ticket.workspace_id,
+        actor_user_id=actor_user_id,
+        action="ticket.category_changed",
+        metadata_={
+            "ticket_id": ticket_id,
+            "old_category": old_category,
+            "new_category": new_category,
+        },
+    )
+    db.session.add(audit)
+    db.session.flush()
+
+    return ticket
+
+
 def list_tickets_for_workspace(workspace_id, status_filter=None):
     """List tickets for a workspace, optionally filtered by status.
 
