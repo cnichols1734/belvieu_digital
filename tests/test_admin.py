@@ -213,7 +213,8 @@ class TestAdminProspects:
         with app.app_context():
             prospect = Prospect.query.first()
             prospect_id = prospect.id
-        resp = client.get(f"/admin/prospects/{prospect_id}")
+        # Converted prospects redirect to workspace detail page
+        resp = client.get(f"/admin/prospects/{prospect_id}", follow_redirects=True)
         assert resp.status_code == 200
         assert b"Test Pizza Shop" in resp.data
 

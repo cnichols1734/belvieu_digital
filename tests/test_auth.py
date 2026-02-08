@@ -84,7 +84,8 @@ class TestRegistration:
                 workspace_id=seed_data["workspace_id"],
             ).first()
             assert membership is not None
-            assert membership.role == "owner"
+            # Workspace already has an owner (admin), so new user gets "member"
+            assert membership.role == "member"
 
             # Verify invite consumed
             invite = WorkspaceInvite.query.filter_by(

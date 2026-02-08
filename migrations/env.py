@@ -111,7 +111,15 @@ def run_migrations_online():
     if 'render_as_batch' not in conf_args:
         conf_args['render_as_batch'] = True
 
-    connectable = get_engine()
+    # Prefer DATABASE_DIRECT_URL for migrations (avoids pooler issues with DDL).
+    # Falls back to the Flask-SQLAlchemy engine if not set.
+    direct_url = os.environ.get("DATABASE_DIRECT_URL")
+    if direct_url:
+        from sqlalchemy import create_engine
+        connectable = create_engine(direct_url)
+        logger.info("Using DATABASE_DIRECT_URL for online migration")
+    else:
+        connectable = get_engine()
 
     with connectable.connect() as connection:
         context.configure(

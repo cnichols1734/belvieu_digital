@@ -6,11 +6,19 @@ class Config:
 
     # --- Required ---
     SECRET_KEY = os.environ.get("SECRET_KEY")
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
+
+    # Handle DATABASE_URL: some PaaS providers (Railway, Heroku) use
+    # "postgres://" which SQLAlchemy 1.4+ doesn't accept.
+    _db_url = os.environ.get("DATABASE_URL", "")
+    if _db_url.startswith("postgres://"):
+        _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+    SQLALCHEMY_DATABASE_URI = _db_url or None
+
     STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")
     STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET")
     STRIPE_BASIC_PRICE_ID = os.environ.get("STRIPE_BASIC_PRICE_ID")
     STRIPE_PRO_PRICE_ID = os.environ.get("STRIPE_PRO_PRICE_ID")
+    STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY")
     APP_BASE_URL = os.environ.get("APP_BASE_URL", "http://localhost:5000")
 
     # --- Optional / Supabase dual connection ---
@@ -70,6 +78,7 @@ class TestConfig(Config):
     STRIPE_WEBHOOK_SECRET = "whsec_test_fake"
     STRIPE_BASIC_PRICE_ID = "price_basic_test"
     STRIPE_PRO_PRICE_ID = "price_pro_test"
+    STRIPE_PUBLISHABLE_KEY = "pk_test_fake"
     APP_BASE_URL = "http://localhost:5000"
     WTF_CSRF_ENABLED = False  # disable CSRF for test forms
     RATELIMIT_ENABLED = False  # disable rate limiting in tests
