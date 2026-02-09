@@ -10,6 +10,11 @@
   <meta property="og:title" content="Belvieu Digital | Websites Made Simple">
   <meta property="og:description" content="Custom websites for local businesses. Plans starting at $59/month, cancel anytime.">
   <meta property="og:type" content="website">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon-32.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -106,11 +111,10 @@
       font-family: var(--font-sans);
       font-size: 1.1rem; font-weight: 700;
       letter-spacing: -0.01em; color: var(--black);
-      display: flex; align-items: center; gap: 0.5rem;
+      display: flex; align-items: center; gap: 0.6rem;
     }
     .logo-mark {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--accent); flex-shrink: 0;
+      width: 30px; height: 30px; flex-shrink: 0;
     }
     .nav-links { display: flex; align-items: center; gap: 2rem; }
     .nav-links a {
@@ -169,7 +173,12 @@
        ──────────────────────────────────────────── */
     .hero {
       padding: 10rem 0 7rem; text-align: center;
-      background: var(--white); position: relative;
+      position: relative; overflow: hidden;
+      background-color: var(--white);
+      background-image:
+        radial-gradient(ellipse at 50% 50%, transparent 20%, var(--white) 75%),
+        url("data:image/svg+xml,%3Csvg width='52' height='52' viewBox='0 0 52 52' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='1' y='1' width='24' height='24' rx='2' fill='%23f0f0f0'/%3E%3C/svg%3E");
+      background-size: 100% 100%, 52px 52px;
     }
     .hero::after {
       content: ''; position: absolute; bottom: 0; left: 0; right: 0;
@@ -323,7 +332,7 @@
        VALUES BAR
        ──────────────────────────────────────────── */
     .values { padding: 5rem 0; background: var(--gray-900); color: var(--white); }
-    .values-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; text-align: center; }
+    .values-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; text-align: center; }
     .values-grid .v-item h4 {
       font-family: var(--font-sans); font-size: 0.95rem; font-weight: 600;
       margin-bottom: 0.4rem; color: var(--white);
@@ -442,6 +451,112 @@
       .hero-scroll { display: none; }
       .footer-inner { flex-direction: column; text-align: center; }
     }
+
+    /* ────────────────────────────────────────────
+       CONTACT MODAL
+       ──────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 1.5rem;
+      opacity: 0; visibility: hidden;
+      transition: opacity 0.3s var(--ease), visibility 0.3s;
+    }
+    .modal-overlay.active { opacity: 1; visibility: visible; }
+
+    .modal {
+      background: var(--white); border-radius: 12px;
+      width: 100%; max-width: 480px;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.12);
+      transform: translateY(16px) scale(0.98);
+      transition: transform 0.35s var(--ease);
+      position: relative; overflow: hidden;
+    }
+    .modal-overlay.active .modal {
+      transform: translateY(0) scale(1);
+    }
+
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.5rem 2rem 0;
+    }
+    .modal-header h3 {
+      font-family: var(--font-serif); font-size: 1.5rem;
+      font-weight: 400; color: var(--black);
+    }
+    .modal-close {
+      width: 32px; height: 32px; border: none; background: none;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      border-radius: 6px; color: var(--gray-400);
+      transition: background 0.2s, color 0.2s;
+    }
+    .modal-close:hover { background: var(--gray-50); color: var(--black); }
+    .modal-close svg { width: 18px; height: 18px; }
+
+    .modal-body { padding: 1.25rem 2rem 2rem; }
+
+    .modal-body p.modal-desc {
+      font-size: 0.88rem; line-height: 1.6; color: var(--gray-500);
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group { margin-bottom: 1rem; }
+    .form-group label {
+      display: block; font-size: 0.75rem; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--gray-400); margin-bottom: 0.4rem;
+    }
+    .form-group input,
+    .form-group textarea {
+      width: 100%; padding: 0.75rem 0.85rem;
+      font-family: var(--font-sans); font-size: 0.9rem;
+      border: 1.5px solid var(--gray-200); border-radius: 6px;
+      background: var(--white); color: var(--black); outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-group input::placeholder,
+    .form-group textarea::placeholder { color: var(--gray-300); }
+    .form-group input:focus,
+    .form-group textarea:focus { border-color: var(--gray-400); }
+    .form-group textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
+
+    .modal-submit {
+      width: 100%; padding: 0.85rem 1.5rem; margin-top: 0.5rem;
+      font-family: var(--font-sans); font-size: 0.85rem; font-weight: 600;
+      background: var(--black); color: var(--white);
+      border: none; border-radius: 6px; cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .modal-submit:hover { background: var(--gray-800); transform: translateY(-1px); }
+    .modal-submit:disabled {
+      opacity: 0.6; cursor: not-allowed; transform: none;
+    }
+
+    /* Success / error states */
+    .modal-success { text-align: center; padding: 2rem 0 1rem; }
+    .modal-success .success-icon {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: var(--gray-50); border: 1.5px solid var(--gray-200);
+      display: inline-flex; align-items: center; justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .modal-success .success-icon svg { width: 22px; height: 22px; color: var(--black); }
+    .modal-success h4 {
+      font-family: var(--font-serif); font-size: 1.25rem;
+      font-weight: 400; margin-bottom: 0.5rem; color: var(--black);
+    }
+    .modal-success p { font-size: 0.88rem; color: var(--gray-500); line-height: 1.6; }
+
+    .modal-error {
+      font-size: 0.8rem; color: #c0392b; background: #fdf0ef;
+      border: 1px solid #f5c6cb; border-radius: 6px;
+      padding: 0.65rem 0.85rem; margin-bottom: 1rem;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -454,7 +569,10 @@
   <header class="site-header" role="banner">
     <div class="nav-inner">
       <a href="#" class="logo">
-        <span class="logo-mark"></span>
+        <svg class="logo-mark" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="7" fill="#1a1a1a"/>
+          <text x="16" y="21.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="700" letter-spacing="-0.5" fill="#fff">BD</text>
+        </svg>
         Belvieu Digital
       </a>
 
@@ -612,7 +730,7 @@
             </li>
             <li>
               <svg class="check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12"/><polyline points="7 12.5 10.5 16 17 9"/></svg>
-              SEO fundamentals
+              Custom domain setup
             </li>
           </ul>
 
@@ -634,11 +752,7 @@
             </li>
             <li>
               <svg class="check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12"/><polyline points="7 12.5 10.5 16 17 9"/></svg>
-              Unlimited content edits
-            </li>
-            <li>
-              <svg class="check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12"/><polyline points="7 12.5 10.5 16 17 9"/></svg>
-              Custom domain setup
+              15 priority edits per month
             </li>
             <li>
               <svg class="check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12"/><polyline points="7 12.5 10.5 16 17 9"/></svg>
@@ -646,7 +760,7 @@
             </li>
             <li>
               <svg class="check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12"/><polyline points="7 12.5 10.5 16 17 9"/></svg>
-              Analytics dashboard
+              SEO fundamentals
             </li>
           </ul>
 
@@ -655,7 +769,7 @@
 
       </div>
 
-      <p class="pricing-note reveal" style="text-align: center; transition-delay: 0.3s;">No credit card required to start. Cancel anytime, no questions asked.</p>
+      <p class="pricing-note reveal" style="text-align: center; transition-delay: 0.3s;">Cancel anytime, no questions asked.</p>
     </div>
   </section>
 
@@ -673,17 +787,12 @@
         <div class="v-item reveal" style="transition-delay: 0.15s">
           <svg class="v-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
           <h4>Fast Turnaround</h4>
-          <p>Most sites designed and launched within two weeks.</p>
+          <p>Most sites designed and launched within one week.</p>
         </div>
         <div class="v-item reveal" style="transition-delay: 0.25s">
           <svg class="v-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           <h4>Real Support</h4>
-          <p>Talk to a real person. No chatbots, no ticket queues, no runaround.</p>
-        </div>
-        <div class="v-item reveal" style="transition-delay: 0.35s">
-          <svg class="v-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          <h4>You Own It</h4>
-          <p>Your content, your domain. If you leave, you keep everything.</p>
+          <p>Talk to a real person. No chatbots, no runaround.</p>
         </div>
       </div>
     </div>
@@ -719,15 +828,7 @@
           <h2>Access your portal.</h2>
           <p>Already have an account? Log in to manage your site, submit requests, and view your billing.</p>
 
-          <div class="login-block-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-              <polyline points="10 17 15 12 10 7"/>
-              <line x1="15" y1="12" x2="3" y2="12"/>
-            </svg>
-          </div>
-
-          <a href="{{ url_for('auth.login') }}" class="btn btn-primary" style="width: 100%; max-width: 380px; justify-content: center; margin: 0 auto;">
+          <a href="{{ url_for('auth.login') }}" class="btn btn-primary" style="width: 100%; max-width: 380px; justify-content: center; margin: 0 auto; padding: 0.85rem 1.5rem;">
             Log In to Client Portal
           </a>
         </div>
@@ -744,7 +845,7 @@
       <span class="label">Let's Talk</span>
       <h2>Ready for a website that<br>works as hard as you do?</h2>
       <p>We take on a limited number of clients to ensure every site gets the attention it deserves.</p>
-      <a href="mailto:hello@belvieudigital.com" class="btn btn-primary">Get in Touch</a>
+      <button type="button" class="btn btn-primary" onclick="openContactModal()">Get in Touch</button>
     </div>
   </section>
 
@@ -754,7 +855,10 @@
   <footer class="site-footer" role="contentinfo">
     <div class="wrap footer-inner">
       <div class="footer-logo">
-        <span class="logo-mark"></span>
+        <svg style="width: 26px; height: 26px;" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="7" fill="#1a1a1a"/>
+          <text x="16" y="21.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="700" letter-spacing="-0.5" fill="#fff">BD</text>
+        </svg>
         Belvieu Digital
       </div>
       <div class="footer-links">
@@ -764,6 +868,72 @@
       <p>&copy; 2026 Belvieu Digital. All rights reserved.</p>
     </div>
   </footer>
+
+  <!-- ═══════════════════════════════════════════
+       CONTACT MODAL
+       ═══════════════════════════════════════════ -->
+  <div class="modal-overlay" id="contactModal">
+    <div class="modal" role="dialog" aria-labelledby="contactTitle" aria-modal="true">
+
+      <!-- Form state -->
+      <div id="contactFormWrap">
+        <div class="modal-header">
+          <h3 id="contactTitle">Get in touch</h3>
+          <button type="button" class="modal-close" onclick="closeContactModal()" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <p class="modal-desc">Tell us a bit about your business and we'll get back to you within one business day.</p>
+
+          <div class="modal-error" id="contactError"></div>
+
+          <form id="contactForm" onsubmit="return submitContact(event)">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="contactName">Name</label>
+                <input type="text" id="contactName" name="name" placeholder="Your name" required>
+              </div>
+              <div class="form-group">
+                <label for="contactEmail">Email</label>
+                <input type="email" id="contactEmail" name="email" placeholder="you@company.com" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="contactPhone">Phone <span style="font-weight: 400; text-transform: none; letter-spacing: 0;">(optional)</span></label>
+              <input type="tel" id="contactPhone" name="phone" placeholder="(555) 123-4567">
+            </div>
+            <div class="form-group">
+              <label for="contactMessage">Message</label>
+              <textarea id="contactMessage" name="message" placeholder="Tell us about your business and what you're looking for..." required></textarea>
+            </div>
+            <button type="submit" class="modal-submit" id="contactSubmitBtn">Send Message</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Success state -->
+      <div id="contactSuccess" style="display: none;">
+        <div class="modal-header">
+          <span></span>
+          <button type="button" class="modal-close" onclick="closeContactModal()" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-success">
+            <div class="success-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <h4>Message sent.</h4>
+            <p>Thanks for reaching out. We'll get back to you within one business day. A confirmation has been sent to your email.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
 
   <!-- ═══════════════════════════════════════════
        SCRIPTS
@@ -850,6 +1020,95 @@
 
     window.location.href = '/auth/register?token=' + encodeURIComponent(input);
     return false;
+  }
+
+  /* ── Contact modal ── */
+  function openContactModal() {
+    document.getElementById('contactModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+    // Focus the first input after animation
+    setTimeout(function() { document.getElementById('contactName').focus(); }, 350);
+  }
+
+  function closeContactModal() {
+    document.getElementById('contactModal').classList.remove('active');
+    document.body.style.overflow = '';
+    // Reset to form state after close animation
+    setTimeout(function() {
+      document.getElementById('contactFormWrap').style.display = '';
+      document.getElementById('contactSuccess').style.display = 'none';
+      document.getElementById('contactForm').reset();
+      document.getElementById('contactError').style.display = 'none';
+      document.getElementById('contactSubmitBtn').disabled = false;
+      document.getElementById('contactSubmitBtn').textContent = 'Send Message';
+    }, 300);
+  }
+
+  // Close on overlay click
+  document.getElementById('contactModal').addEventListener('click', function(e) {
+    if (e.target === this) closeContactModal();
+  });
+
+  // Close on Escape
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.getElementById('contactModal').classList.contains('active')) {
+      closeContactModal();
+    }
+  });
+
+  function submitContact(e) {
+    e.preventDefault();
+    var btn = document.getElementById('contactSubmitBtn');
+    var errorEl = document.getElementById('contactError');
+
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    errorEl.style.display = 'none';
+
+    var payload = {
+      name: document.getElementById('contactName').value.trim(),
+      email: document.getElementById('contactEmail').value.trim(),
+      phone: document.getElementById('contactPhone').value.trim(),
+      message: document.getElementById('contactMessage').value.trim()
+    };
+
+    fetch('/contact/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRFToken()
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
+    .then(function(result) {
+      if (result.data.ok) {
+        // Show success state
+        document.getElementById('contactFormWrap').style.display = 'none';
+        document.getElementById('contactSuccess').style.display = '';
+      } else {
+        errorEl.textContent = result.data.error || 'Something went wrong. Please try again.';
+        errorEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Send Message';
+      }
+    })
+    .catch(function() {
+      errorEl.textContent = 'Network error. Please check your connection and try again.';
+      errorEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Send Message';
+    });
+
+    return false;
+  }
+
+  function getCSRFToken() {
+    // Try meta tag first, then cookie
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta) return meta.getAttribute('content');
+    var match = document.cookie.match(/csrf_token=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
   }
   </script>
 
