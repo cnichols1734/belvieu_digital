@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Belvieu Digital — Client Portal{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon-32.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,7 +17,10 @@
     <nav class="nav">
         <div class="nav-inner">
             <a href="{% if g.site is defined and g.site %}{{ url_for('portal.dashboard', site_slug=g.site.site_slug) }}{% elif current_user.is_authenticated and current_user.is_admin %}{{ url_for('admin.dashboard') }}{% else %}/{% endif %}" class="nav-brand">
-                <span class="nav-brand-icon">B</span>
+                <svg class="nav-brand-icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style="border-radius: 6px;">
+                    <rect width="32" height="32" rx="7" fill="#1a1a1a"/>
+                    <text x="16" y="21.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="700" letter-spacing="-0.5" fill="#fff">BD</text>
+                </svg>
                 <span class="nav-brand-text">Belvieu Digital</span>
             </a>
             <div class="nav-links">

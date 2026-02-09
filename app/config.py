@@ -21,6 +21,15 @@ class Config:
     STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY")
     APP_BASE_URL = os.environ.get("APP_BASE_URL", "http://localhost:5000")
 
+    # --- Email (Google Workspace SMTP) ---
+    MAIL_SMTP_HOST = os.environ.get("MAIL_SMTP_HOST", "smtp.gmail.com")
+    MAIL_SMTP_PORT = int(os.environ.get("MAIL_SMTP_PORT", 587))
+    MAIL_USERNAME = os.environ.get("MAIL_USERNAME")          # e.g. info@belvieudigital.com
+    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")          # Google App Password
+    MAIL_FROM_NAME = os.environ.get("MAIL_FROM_NAME", "Belvieu Digital")
+    MAIL_FROM_ADDRESS = os.environ.get("MAIL_FROM_ADDRESS")  # defaults to MAIL_USERNAME
+    MAIL_CONTACT_TO = os.environ.get("MAIL_CONTACT_TO", "info@belvieudigital.com")
+
     # --- Optional / Supabase dual connection ---
     # Pooler URL for runtime, direct URL for migrations (DDL).
     DATABASE_DIRECT_URL = os.environ.get("DATABASE_DIRECT_URL")

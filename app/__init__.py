@@ -47,12 +47,14 @@ def create_app(config_name=None):
     from app.blueprints.billing import billing_bp
     from app.blueprints.admin import admin_bp
     from app.blueprints.webhooks import webhooks_bp
+    from app.blueprints.contact import contact_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(portal_bp)
     app.register_blueprint(billing_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(webhooks_bp)
+    app.register_blueprint(contact_bp)
 
     # Exempt webhooks from CSRF — raw body needed for Stripe signature verification
     csrf.exempt(webhooks_bp)
