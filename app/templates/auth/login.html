@@ -38,11 +38,12 @@
                 >
             </div>
 
-            <div class="form-group form-check">
-                <label class="check-label">
+            <div class="form-group" style="display: flex; align-items: center; justify-content: space-between;">
+                <label class="check-label" style="margin-bottom: 0;">
                     <input type="checkbox" name="remember" value="1">
                     <span>Remember me</span>
                 </label>
+                <a href="{{ url_for('auth.forgot_password') }}" class="text-sm" style="color: var(--color-text-muted);">Forgot password?</a>
             </div>
 
             <button type="submit" class="btn btn-primary btn-lg btn-full">Sign in</button>

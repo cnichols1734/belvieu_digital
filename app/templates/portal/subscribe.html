@@ -1,18 +1,36 @@
 {% extends "base.html" %}
 
-{% block title %}Choose a Plan — {{ g.site.display_name or g.workspace.name }}{% endblock %}
+{% block title %}Activate Your Website — {{ g.site.display_name or g.workspace.name }}{% endblock %}
 
 {% block content %}
+{# Determine recommended plan from workspace settings #}
+{% set settings = g.workspace.settings if g.workspace else None %}
+{% set recommended = settings.plan_features.get('recommended_plan', '') if settings and settings.plan_features else '' %}
+
 <div class="cta-page" style="max-width: 100%; padding-bottom: 2rem;">
-    <h1>Choose your plan</h1>
-    <p style="max-width: 420px; margin: 0 auto 2.5rem;">
-        Get your custom-built website live. Pick the plan that works for your business.
+    <svg style="width: 48px; height: 48px; margin: 0 auto 1rem; color: var(--green-500, #22c55e);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    <h1>Welcome to Belvieu Digital!</h1>
+    <p style="max-width: 480px; margin: 0 auto 1rem;">
+        Your custom website for <strong>{{ g.site.display_name or g.workspace.name }}</strong> is ready.
+        Just one more step — activate your plan to go live.
     </p>
+    {% if g.site.published_url %}
+    <p style="margin-bottom: 2rem;">
+        <a href="{{ g.site.published_url }}" target="_blank" style="color: var(--color-text-muted); font-size: 0.9rem;">
+            Preview your site ↗
+        </a>
+    </p>
+    {% endif %}
 </div>
 
 <div class="pricing-grid">
     {# ── Basic Plan ── #}
-    <div class="pricing-card">
+    <div class="pricing-card {{ 'pricing-card-featured' if recommended == 'basic' }}">
+        {% if recommended == 'basic' %}
+        <div class="pricing-badge">Recommended</div>
+        {% endif %}
         <div class="pricing-plan-name">Basic</div>
         <div class="pricing-price">$59<span>/mo</span></div>
         <div class="pricing-description">Everything you need to get online</div>
@@ -24,11 +42,11 @@
             </li>
             <li>
                 <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                Hosting included
+                Hosting &amp; SSL included
             </li>
             <li>
                 <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                SSL certificate
+                Mobile-responsive design
             </li>
             <li>
                 <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
@@ -36,20 +54,26 @@
             </li>
             <li>
                 <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                Content updates (2/month)
+                Up to 4 content edits/month
+            </li>
+            <li>
+                <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                Custom domain setup
             </li>
         </ul>
 
         <form method="POST" action="{{ url_for('billing.checkout', site_slug=g.site.site_slug) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="price_id" value="{{ config.STRIPE_BASIC_PRICE_ID }}">
-            <button type="submit" class="btn btn-secondary btn-lg btn-full">Get started</button>
+            <button type="submit" class="btn {{ 'btn-primary' if recommended == 'basic' else 'btn-secondary' }} btn-lg btn-full">
+                {{ 'Activate Basic Plan' if recommended == 'basic' else 'Get started' }}
+            </button>
         </form>
     </div>
 
     {# ── Pro Plan ── #}
-    <div class="pricing-card pricing-card-featured">
-        <div class="pricing-badge">Most Popular</div>
+    <div class="pricing-card {{ 'pricing-card-featured' if recommended != 'basic' }}">
+        <div class="pricing-badge">{{ 'Recommended' if recommended == 'pro' else 'Most Popular' }}</div>
         <div class="pricing-plan-name">Pro</div>
         <div class="pricing-price">$99<span>/mo</span></div>
         <div class="pricing-description">For businesses that want more</div>
@@ -61,7 +85,7 @@
             </li>
             <li>
                 <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                Custom domain setup
+                15 priority edits per month
             </li>
             <li>
                 <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
@@ -69,7 +93,7 @@
             </li>
             <li>
                 <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                Content updates (unlimited)
+                SEO fundamentals
             </li>
             <li>
                 <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
@@ -80,8 +104,14 @@
         <form method="POST" action="{{ url_for('billing.checkout', site_slug=g.site.site_slug) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="price_id" value="{{ config.STRIPE_PRO_PRICE_ID }}">
-            <button type="submit" class="btn btn-primary btn-lg btn-full">Get started</button>
+            <button type="submit" class="btn {{ 'btn-primary' if recommended != 'basic' else 'btn-secondary' }} btn-lg btn-full">
+                {{ 'Activate Pro Plan' if recommended == 'pro' else 'Get started' }}
+            </button>
         </form>
     </div>
 </div>
+
+<p style="text-align: center; margin-top: 1.5rem; font-size: 0.85rem; color: var(--color-text-muted);">
+    No contracts — cancel anytime. Your subscription activates your website and includes ongoing management.
+</p>
 {% endblock %}

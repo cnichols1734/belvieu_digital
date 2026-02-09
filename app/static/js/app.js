@@ -7,13 +7,11 @@
  */
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Auto-dismiss flash messages after 5 seconds with smooth animation
+    // Auto-dismiss flash messages after 5 seconds with smooth slide-out
     document.querySelectorAll(".flash").forEach((el) => {
         setTimeout(() => {
-            el.style.transition = "opacity 0.3s ease, transform 0.3s ease";
-            el.style.opacity = "0";
-            el.style.transform = "translateY(-4px)";
-            setTimeout(() => el.remove(), 300);
+            el.classList.add("flash-dismissing");
+            el.addEventListener("animationend", () => el.remove(), { once: true });
         }, 5000);
     });
 

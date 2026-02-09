@@ -16,14 +16,14 @@
 
     <div class="billing-processing" id="processing-indicator">
         <div class="billing-spinner"></div>
-        <span class="text-sm text-muted">Setting things up...</span>
+        <span class="text-sm text-muted" id="status-text">Setting things up...</span>
     </div>
 
-    <a href="{{ url_for('portal.dashboard', site_slug=g.site.site_slug) }}" class="btn btn-primary btn-lg mt-3">
+    <a href="{{ url_for('portal.dashboard', site_slug=g.site.site_slug) }}?from=checkout" class="btn btn-primary btn-lg mt-3" id="dashboard-btn" style="display:none;">
         Go to dashboard
     </a>
 
-    <p class="text-sm text-muted mt-3">
+    <p class="text-sm text-muted mt-3" id="manual-note" style="display:none;">
         If you're not redirected, click the button above.
     </p>
 </div>
@@ -31,10 +31,41 @@
 
 {% block scripts %}
 <script>
-    // Auto-redirect to dashboard after 5 seconds
-    // (webhook should have processed by then)
-    setTimeout(function() {
-        window.location.href = "{{ url_for('portal.dashboard', site_slug=g.site.site_slug) }}";
-    }, 5000);
+(function() {
+    var dashboardUrl = "{{ url_for('portal.dashboard', site_slug=g.site.site_slug) }}?from=checkout";
+    // Pass the Stripe session_id so the status endpoint can sync directly from Stripe
+    var sessionId = new URLSearchParams(window.location.search).get('session_id') || '';
+    var checkUrl = "{{ url_for('billing.checkout_status', site_slug=g.site.site_slug) }}" + (sessionId ? '?session_id=' + encodeURIComponent(sessionId) : '');
+    var attempts = 0;
+    var maxAttempts = 5;
+
+    function checkStatus() {
+        attempts++;
+        fetch(checkUrl, { credentials: 'same-origin' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.active) {
+                    window.location.href = dashboardUrl;
+                } else if (attempts >= maxAttempts) {
+                    // 6 seconds total — show manual button
+                    document.getElementById('status-text').textContent = 'Almost there — your payment is confirmed.';
+                    document.getElementById('dashboard-btn').style.display = '';
+                    document.getElementById('manual-note').style.display = '';
+                } else {
+                    setTimeout(checkStatus, 1000);
+                }
+            })
+            .catch(function() {
+                if (attempts >= 2) {
+                    window.location.href = dashboardUrl;
+                } else {
+                    setTimeout(checkStatus, 1000);
+                }
+            });
+    }
+
+    // First poll after 1 second — the fallback fetches from Stripe directly
+    setTimeout(checkStatus, 1000);
+})();
 </script>
 {% endblock %}

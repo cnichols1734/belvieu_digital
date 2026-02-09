@@ -47,6 +47,7 @@
                     <option value="">Select source...</option>
                     <option value="google_maps" {{ 'selected' if form_data.get('source') == 'google_maps' }}>Google Maps</option>
                     <option value="facebook" {{ 'selected' if form_data.get('source') == 'facebook' }}>Facebook</option>
+                    <option value="yelp" {{ 'selected' if form_data.get('source') == 'yelp' }}>Yelp</option>
                     <option value="referral" {{ 'selected' if form_data.get('source') == 'referral' }}>Referral</option>
                     <option value="other" {{ 'selected' if form_data.get('source') == 'other' }}>Other</option>
                 </select>

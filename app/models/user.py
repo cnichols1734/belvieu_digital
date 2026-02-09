@@ -22,6 +22,8 @@ class User(UserMixin, db.Model):
     full_name = db.Column(db.String(255))
     is_admin = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
+    password_reset_token = db.Column(db.String(255), nullable=True)
+    password_reset_expires = db.Column(db.DateTime(timezone=True), nullable=True)
     created_at = db.Column(
         db.DateTime(timezone=True), server_default=db.func.now()
     )

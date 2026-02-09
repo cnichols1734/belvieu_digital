@@ -29,6 +29,34 @@
         ← Back to Workspace
     </a>
 </div>
+
+{# ── Send Invite Email ── #}
+<div class="card" style="max-width: 640px; margin-top: 1.5rem;">
+    <div class="card-header">Send Invite Email</div>
+    <p class="text-sm text-muted mb-1">Compose and send a branded email with the invite link directly to your client.</p>
+
+    <form method="POST" action="{{ url_for('admin.send_invite_email', workspace_id=workspace.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="invite_link" value="{{ invite_link }}">
+
+        <div class="form-group">
+            <label for="recipient_email" class="form-label">Recipient Email</label>
+            <input type="email" id="recipient_email" name="recipient_email" class="form-control"
+                   value="{{ recipient_email or '' }}" placeholder="client@example.com" required>
+        </div>
+
+        <div class="form-group">
+            <label for="custom_message" class="form-label">Custom Message <span class="text-muted">(optional)</span></label>
+            <textarea id="custom_message" name="custom_message" class="form-control" rows="4"
+                      placeholder="I built a custom website for {{ workspace.name }}. I think you'll love it — click the link below to set up your account and take a look.">I built a custom website for {{ workspace.name }}. I think you'll love it — click the link below to set up your account and take a look.</textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            <svg style="width: 16px; height: 16px; margin-right: 4px;" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
+            Send Invite Email
+        </button>
+    </form>
+</div>
 {% endblock %}
 
 {% block scripts %}

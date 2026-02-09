@@ -89,6 +89,86 @@ def checkout_success(site_slug):
 
 
 # ──────────────────────────────────────────────
+# GET /<site_slug>/billing/status — AJAX poll
+# ──────────────────────────────────────────────
+
+@billing_bp.route("/<site_slug>/billing/status")
+@login_required_for_site
+def checkout_status(site_slug):
+    """JSON endpoint polled by the success page to check if the
+    subscription is active yet.
+
+    If the webhook hasn't arrived yet, we can use the session_id
+    (passed from the success URL) to fetch the subscription directly
+    from Stripe and sync it ourselves — works even without webhooks.
+    """
+    from flask import jsonify
+    from app.models.billing import BillingSubscription
+
+    sub = (
+        BillingSubscription.query
+        .filter_by(workspace_id=g.workspace_id)
+        .order_by(BillingSubscription.created_at.desc())
+        .first()
+    )
+    active = sub is not None and sub.status in ("active", "trialing")
+
+    # If not active yet, try to sync from Stripe directly using the session_id
+    if not active:
+        session_id = request.args.get("session_id")
+        if session_id:
+            try:
+                import stripe
+                from datetime import datetime, timezone
+                from app.extensions import db
+                from app.services.billing_service import (
+                    get_or_create_billing_customer,
+                    upsert_subscription,
+                    derive_site_status,
+                    get_plan_from_price_id,
+                )
+
+                stripe.api_key = current_app.config["STRIPE_SECRET_KEY"]
+                session = stripe.checkout.Session.retrieve(session_id)
+
+                if session.get("payment_status") == "paid" and session.get("subscription"):
+                    stripe_sub = stripe.Subscription.retrieve(session["subscription"])
+                    stripe_customer_id = session.get("customer")
+
+                    # Ensure billing customer exists
+                    get_or_create_billing_customer(g.workspace_id, stripe_customer_id)
+
+                    # Extract price info
+                    stripe_price_id = None
+                    if stripe_sub.get("items") and stripe_sub["items"].get("data"):
+                        stripe_price_id = stripe_sub["items"]["data"][0].get("price", {}).get("id")
+
+                    # Extract period end (newer Stripe SDK puts it on items, not top level)
+                    from app.services.stripe_service import _extract_period_end
+                    current_period_end = _extract_period_end(stripe_sub)
+
+                    upsert_subscription(
+                        workspace_id=g.workspace_id,
+                        stripe_subscription_id=stripe_sub["id"],
+                        status=stripe_sub.get("status", "active"),
+                        stripe_price_id=stripe_price_id,
+                        current_period_end=current_period_end,
+                        cancel_at_period_end=stripe_sub.get("cancel_at_period_end", False),
+                        app_config=current_app.config,
+                    )
+
+                    derive_site_status(g.workspace_id, stripe_sub.get("status", "active"))
+                    db.session.commit()
+
+                    active = stripe_sub.get("status") in ("active", "trialing")
+                    logger.info(f"Synced subscription from Stripe session {session_id} for workspace {g.workspace_id}")
+            except Exception as e:
+                logger.warning(f"Failed to sync from Stripe session: {e}")
+
+    return jsonify({"active": active})
+
+
+# ──────────────────────────────────────────────
 # GET /<site_slug>/billing/cancel
 # ──────────────────────────────────────────────
 

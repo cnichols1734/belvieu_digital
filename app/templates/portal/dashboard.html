@@ -3,14 +3,30 @@
 {% block title %}Dashboard — {{ g.site.display_name or g.workspace.name }}{% endblock %}
 
 {% block content %}
-<div class="dashboard-welcome">
-    <h1>{{ g.site.display_name or g.workspace.name }}</h1>
-    <p>Welcome back, {{ current_user.full_name.split(' ')[0] if current_user.full_name else current_user.email }}</p>
+
+{# ── Welcome Header ── #}
+<div class="dash-header">
+    <div>
+        <h1 class="dash-title">{{ g.site.display_name or g.workspace.name }}</h1>
+        <p class="dash-subtitle">Welcome back, {{ current_user.full_name.split(' ')[0] if current_user.full_name else current_user.email }}</p>
+    </div>
+    {% if g.subscription %}
+    <div class="dash-plan-pill">
+        <span class="dash-plan-name">{{ g.subscription.plan|capitalize if g.subscription.plan else 'Plan' }}</span>
+        {% if g.subscription.status == 'active' %}
+            <span class="dash-plan-status dash-plan-active"><span class="badge-dot"></span>Active</span>
+        {% elif g.subscription.status == 'trialing' %}
+            <span class="dash-plan-status dash-plan-trial"><span class="badge-dot"></span>Trial</span>
+        {% elif g.subscription.status == 'past_due' %}
+            <span class="dash-plan-status dash-plan-pastdue"><span class="badge-dot"></span>Past Due</span>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 
-{# ── Past Due Warning Banner ── #}
+{# ── Past Due Warning ── #}
 {% if g.access_level == 'read_only' %}
-<div class="alert alert-warning">
+<div class="alert alert-warning" style="margin-bottom: 1.5rem;">
     <svg class="alert-icon" viewBox="0 0 20 20" fill="currentColor">
         <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
     </svg>
@@ -24,146 +40,163 @@
 </div>
 {% endif %}
 
-{# ── Subscription Status Card ── #}
-<div class="subscription-card">
-    <div class="subscription-info">
-        {% if g.subscription %}
-            <div>
-                <div class="subscription-plan">
-                    {{ g.subscription.plan|capitalize if g.subscription.plan else 'Subscription' }}
-                    {% if g.subscription.status == 'active' %}
-                        <span class="badge badge-active"><span class="badge-dot"></span> Active</span>
-                    {% elif g.subscription.status == 'trialing' %}
-                        <span class="badge badge-trialing"><span class="badge-dot"></span> Trial</span>
-                    {% elif g.subscription.status == 'past_due' %}
-                        <span class="badge badge-past-due"><span class="badge-dot"></span> Past Due</span>
-                    {% endif %}
-                </div>
-                <div class="subscription-renewal">
-                    {% if g.subscription.cancel_at_period_end %}
-                        Cancels {{ g.subscription.current_period_end.strftime('%b %d, %Y') if g.subscription.current_period_end else 'soon' }}
-                    {% elif g.subscription.current_period_end %}
-                        Renews {{ g.subscription.current_period_end.strftime('%b %d, %Y') }}
-                    {% endif %}
-                </div>
-            </div>
-        {% else %}
-            <div>
-                <div class="subscription-plan">No subscription</div>
-                <div class="subscription-renewal">Subscribe to activate your website</div>
-            </div>
-        {% endif %}
-    </div>
-
-    <div>
-        {% if g.subscription %}
-            <form method="POST" action="{{ url_for('billing.customer_portal', site_slug=g.site.site_slug) }}" style="display:inline;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-secondary btn-sm">Manage billing</button>
-            </form>
-        {% else %}
-            <a href="{{ url_for('portal.dashboard', site_slug=g.site.site_slug) }}" class="btn btn-primary btn-sm">Start subscription</a>
-        {% endif %}
-    </div>
-</div>
-
-{# ── Content Grid ── #}
-<div class="content-grid">
-    {# ── Website Info ── #}
-    <div class="card">
-        <div class="card-header">Your Website</div>
-        {% if g.site.custom_domain %}
-            <div class="site-info-item">
-                <div class="site-info-label">Custom Domain</div>
-                <div class="site-info-value">{{ g.site.custom_domain }}</div>
-            </div>
-        {% endif %}
-        {% if g.site.published_url %}
-            <div class="site-info-item">
-                <div class="site-info-label">Preview URL</div>
-                <div class="site-info-value">
-                    <a href="{{ g.site.published_url }}" target="_blank" rel="noopener">
-                        {{ g.site.published_url }}
-                        <svg class="external-link-icon" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/>
-                            <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/>
-                        </svg>
-                    </a>
-                </div>
-            </div>
-        {% endif %}
-        <div class="site-info-item">
-            <div class="site-info-label">Status</div>
-            <div class="site-info-value">
+{# ── Website Preview Card (full width) ── #}
+{% if g.site.published_url or g.site.custom_domain %}
+{% set site_url = g.site.custom_domain if g.site.custom_domain else g.site.published_url %}
+<div class="dash-site-card">
+    <a href="{{ site_url }}" target="_blank" rel="noopener" class="dash-site-preview">
+        <img
+            src="https://api.microlink.io/?url={{ site_url | urlencode }}&screenshot&meta=false&embed=screenshot.url&viewport.width=1440&viewport.height=900"
+            alt="Website preview"
+            class="dash-site-thumb"
+            loading="lazy"
+            onerror="this.parentElement.classList.add('dash-site-preview-fallback')"
+        >
+        <div class="dash-site-preview-overlay">
+            <svg style="width: 20px; height: 20px;" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/>
+                <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/>
+            </svg>
+        </div>
+    </a>
+    <div class="dash-site-info">
+        <div class="dash-site-info-left">
+            <div class="dash-site-name">Your Website</div>
+            <div class="dash-site-meta">
                 {% if g.site.status == 'active' %}
                     <span class="badge badge-active"><span class="badge-dot"></span> Live</span>
                 {% elif g.site.status == 'demo' %}
                     <span class="badge badge-demo"><span class="badge-dot"></span> Demo</span>
                 {% elif g.site.status == 'paused' %}
                     <span class="badge badge-paused"><span class="badge-dot"></span> Paused</span>
-                {% else %}
-                    <span class="badge badge-canceled"><span class="badge-dot"></span> {{ g.site.status|capitalize }}</span>
+                {% endif %}
+                {% if g.site.custom_domain %}
+                    <span class="dash-site-domain">{{ g.site.custom_domain }}</span>
                 {% endif %}
             </div>
         </div>
+        <a href="{{ site_url }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">
+            Visit your website
+            <svg style="width: 14px; height: 14px; margin-left: 4px;" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/>
+                <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/>
+            </svg>
+        </a>
     </div>
+</div>
+{% endif %}
 
-    {# ── Team Members ── #}
-    <div class="card">
-        <div class="card-header">Team ({{ team_members | length }})</div>
-        {% for tm in team_members %}
-        <div class="site-info-item" style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <div style="font-weight: 500;">{{ tm.user.full_name or tm.user.email }}</div>
-                {% if tm.user.full_name %}
-                    <div class="text-muted text-sm">{{ tm.user.email }}</div>
-                {% endif %}
-            </div>
-            <span class="badge badge-{{ tm.member.role }}">{{ tm.member.role | title }}</span>
-        </div>
-        {% endfor %}
-    </div>
-
-    {# ── Recent Tickets ── #}
-    <div class="card">
-        <div class="card-header">
-            Recent Tickets
-            {% if g.access_level == 'full' %}
-                <a href="{{ url_for('portal.ticket_new', site_slug=g.site.site_slug) }}" class="btn btn-sm btn-secondary">New ticket</a>
+{# ── Info Cards Row ── #}
+<div class="dash-cards">
+    {# ── Subscription & Billing ── #}
+    <div class="dash-card">
+        <div class="dash-card-header">
+            <span class="dash-card-title">Subscription</span>
+            {% if g.subscription %}
+                <form method="POST" action="{{ url_for('billing.customer_portal', site_slug=g.site.site_slug) }}" style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="dash-card-action">Manage billing</button>
+                </form>
             {% endif %}
         </div>
-        {% if recent_tickets %}
-            {% for ticket in recent_tickets %}
-                <a href="{{ url_for('portal.ticket_detail', site_slug=g.site.site_slug, ticket_id=ticket.id) }}" class="ticket-row-link" {% if not loop.last %}style="border-bottom: 1px solid var(--color-border-light);"{% endif %}>
-                    <div>
-                        <div class="ticket-row-subject">{{ ticket.subject }}</div>
-                        <div class="ticket-row-meta">
-                            {{ ticket.category|replace('_', ' ')|capitalize if ticket.category else '' }}
+        <div class="dash-card-body">
+            {% if g.subscription %}
+                <div class="dash-detail">
+                    <span class="dash-detail-label">Plan</span>
+                    <span class="dash-detail-value">{{ g.subscription.plan|capitalize if g.subscription.plan else '—' }}</span>
+                </div>
+                <div class="dash-detail">
+                    <span class="dash-detail-label">Status</span>
+                    <span class="dash-detail-value">
+                        {% if g.subscription.status == 'active' %}Active
+                        {% elif g.subscription.status == 'trialing' %}Trial
+                        {% elif g.subscription.status == 'past_due' %}Past Due
+                        {% else %}{{ g.subscription.status|capitalize }}
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="dash-detail">
+                    <span class="dash-detail-label">
+                        {% if g.subscription.cancel_at_period_end %}Cancels{% else %}Renews{% endif %}
+                    </span>
+                    <span class="dash-detail-value">
+                        {{ g.subscription.current_period_end.strftime('%b %d, %Y') if g.subscription.current_period_end else '—' }}
+                    </span>
+                </div>
+            {% else %}
+                <p class="dash-empty-text">No active subscription</p>
+                <a href="{{ url_for('portal.dashboard', site_slug=g.site.site_slug) }}" class="btn btn-primary btn-sm" style="margin-top: 0.75rem;">Start subscription</a>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ── Team ── #}
+    <div class="dash-card">
+        <div class="dash-card-header">
+            <span class="dash-card-title">Team</span>
+            <span class="dash-card-count">{{ team_members | length }}</span>
+        </div>
+        <div class="dash-card-body">
+            {% for tm in team_members %}
+            <div class="dash-team-member">
+                <div class="dash-team-avatar">{{ (tm.user.full_name or tm.user.email)[0]|upper }}</div>
+                <div class="dash-team-info">
+                    <div class="dash-team-name">{{ tm.user.full_name or tm.user.email }}</div>
+                    {% if tm.user.full_name %}
+                    <div class="dash-team-email">{{ tm.user.email }}</div>
+                    {% endif %}
+                </div>
+                <span class="badge badge-{{ tm.member.role }}">{{ tm.member.role | title }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {# ── Support Tickets ── #}
+    <div class="dash-card dash-card-wide">
+        <div class="dash-card-header">
+            <span class="dash-card-title">Support</span>
+            {% if g.access_level == 'full' %}
+                <a href="{{ url_for('portal.ticket_new', site_slug=g.site.site_slug) }}" class="btn btn-sm btn-primary">New ticket</a>
+            {% endif %}
+        </div>
+        <div class="dash-card-body">
+            {% if recent_tickets %}
+                {% for ticket in recent_tickets %}
+                <a href="{{ url_for('portal.ticket_detail', site_slug=g.site.site_slug, ticket_id=ticket.id) }}" class="dash-ticket">
+                    <div class="dash-ticket-left">
+                        <div class="dash-ticket-subject">{{ ticket.subject }}</div>
+                        <div class="dash-ticket-meta">
+                            {{ ticket.category|replace('_', ' ')|capitalize if ticket.category else 'General' }}
                             &middot;
                             {{ ticket.last_activity_at.strftime('%b %d') if ticket.last_activity_at else '' }}
                         </div>
                     </div>
-                    <div>
-                        {% if ticket.status == 'open' %}
-                            <span class="badge badge-open"><span class="badge-dot"></span> Open</span>
-                        {% elif ticket.status == 'in_progress' %}
-                            <span class="badge badge-in-progress"><span class="badge-dot"></span> In Progress</span>
-                        {% elif ticket.status == 'waiting_on_client' %}
-                            <span class="badge badge-waiting"><span class="badge-dot"></span> Waiting</span>
-                        {% elif ticket.status == 'done' %}
-                            <span class="badge badge-done"><span class="badge-dot"></span> Done</span>
-                        {% endif %}
-                    </div>
+                    {% if ticket.status == 'open' %}
+                        <span class="badge badge-open"><span class="badge-dot"></span> Open</span>
+                    {% elif ticket.status == 'in_progress' %}
+                        <span class="badge badge-in-progress"><span class="badge-dot"></span> In Progress</span>
+                    {% elif ticket.status == 'waiting_on_client' %}
+                        <span class="badge badge-waiting"><span class="badge-dot"></span> Waiting</span>
+                    {% elif ticket.status == 'done' %}
+                        <span class="badge badge-done"><span class="badge-dot"></span> Done</span>
+                    {% endif %}
                 </a>
-            {% endfor %}
-            <div style="padding-top: 0.75rem; text-align: center;">
-                <a href="{{ url_for('portal.ticket_list', site_slug=g.site.site_slug) }}" class="text-sm">View all tickets</a>
-            </div>
-        {% else %}
-            <div class="empty-state" style="padding: 2rem 1rem;">
-                <p style="margin-bottom: 0;">No tickets yet. Need help with your website? Create a support ticket.</p>
-            </div>
-        {% endif %}
+                {% endfor %}
+                <div style="padding-top: 0.75rem; text-align: center;">
+                    <a href="{{ url_for('portal.ticket_list', site_slug=g.site.site_slug) }}" class="dash-card-action">View all tickets</a>
+                </div>
+            {% else %}
+                <div class="dash-empty">
+                    <svg class="dash-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                    </svg>
+                    <p class="dash-empty-text">No tickets yet</p>
+                    <p class="dash-empty-hint">Need a content change or have a question? Open a support ticket.</p>
+                </div>
+            {% endif %}
+        </div>
     </div>
 </div>
+
 {% endblock %}

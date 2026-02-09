@@ -1,11 +1,15 @@
 """Auth blueprint — /auth/*
 
-Handles invite-gated registration, login, logout.
+Handles invite-gated registration, login, logout, password reset.
 Auth routes are slug-independent per design decision #10.
 """
 
+import secrets
+from datetime import datetime, timedelta, timezone
+
 from flask import (
     Blueprint,
+    current_app,
     flash,
     redirect,
     render_template,
@@ -20,6 +24,7 @@ from app.models.audit import AuditEvent
 from app.models.user import User
 from app.models.workspace import WorkspaceMember
 from app.services import invite_service
+from app.services.email_service import send_email
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -221,6 +226,110 @@ def login():
         "auth/login.html",
         next_url=request.args.get("next", ""),
     )
+
+
+# ──────────────────────────────────────────────
+# GET/POST /auth/forgot-password
+# ──────────────────────────────────────────────
+
+@auth_bp.route("/forgot-password", methods=["GET", "POST"])
+@limiter.limit("5 per minute", methods=["POST"])
+def forgot_password():
+    """Send a password reset link to the user's email."""
+    if current_user.is_authenticated:
+        return redirect("/")
+
+    if request.method == "POST":
+        email = request.form.get("email", "").lower().strip()
+
+        if not email:
+            flash("Email is required.", "error")
+            return render_template("auth/forgot_password.html", email=email)
+
+        user = User.query.filter_by(email=email).first()
+
+        # Always show success message (don't reveal if email exists)
+        if user:
+            # Generate reset token
+            token = secrets.token_urlsafe(48)
+            user.password_reset_token = token
+            user.password_reset_expires = datetime.now(timezone.utc) + timedelta(hours=1)
+            db.session.commit()
+
+            # Send reset email
+            base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5001")
+            reset_link = f"{base_url}/auth/reset-password?token={token}"
+
+            send_email(
+                to=user.email,
+                subject="Reset your password — Belvieu Digital",
+                template="emails/password_reset.html",
+                context={"reset_link": reset_link},
+            )
+
+        flash("If an account exists with that email, we've sent a reset link.", "success")
+        return redirect(url_for("auth.login"))
+
+    return render_template("auth/forgot_password.html")
+
+
+# ──────────────────────────────────────────────
+# GET/POST /auth/reset-password?token=<token>
+# ──────────────────────────────────────────────
+
+@auth_bp.route("/reset-password", methods=["GET", "POST"])
+@limiter.limit("10 per minute", methods=["POST"])
+def reset_password():
+    """Reset password using a valid token."""
+    if current_user.is_authenticated:
+        return redirect("/")
+
+    token = request.args.get("token") or request.form.get("token")
+
+    if not token:
+        flash("Invalid reset link.", "error")
+        return render_template("auth/reset_password.html", token_error=True)
+
+    # Validate token
+    user = User.query.filter_by(password_reset_token=token).first()
+
+    if user is None:
+        return render_template("auth/reset_password.html", token_error=True)
+
+    # Compare as UTC — SQLite returns naive datetimes, so make both aware
+    reset_expires = user.password_reset_expires
+    if reset_expires and reset_expires.tzinfo is None:
+        reset_expires = reset_expires.replace(tzinfo=timezone.utc)
+    if reset_expires and reset_expires < datetime.now(timezone.utc):
+        return render_template("auth/reset_password.html", token_error=True)
+
+    if request.method == "POST":
+        password = request.form.get("password", "")
+        password_confirm = request.form.get("password_confirm", "")
+
+        errors = []
+        if not password:
+            errors.append("Password is required.")
+        elif len(password) < 8:
+            errors.append("Password must be at least 8 characters.")
+        if password != password_confirm:
+            errors.append("Passwords do not match.")
+
+        if errors:
+            for err in errors:
+                flash(err, "error")
+            return render_template("auth/reset_password.html", token=token)
+
+        # Update password and clear reset token
+        user.password_hash = generate_password_hash(password)
+        user.password_reset_token = None
+        user.password_reset_expires = None
+        db.session.commit()
+
+        flash("Your password has been reset. You can now log in.", "success")
+        return redirect(url_for("auth.login"))
+
+    return render_template("auth/reset_password.html", token=token)
 
 
 # ──────────────────────────────────────────────

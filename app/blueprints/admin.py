@@ -43,6 +43,8 @@ from app.models.ticket import Ticket, TicketMessage
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember, WorkspaceSettings
 from app.services import invite_service, ticket_service
+from app.services.email_service import send_email
+from app.models.prospect_activity import ProspectActivity
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -76,11 +78,23 @@ def dashboard():
     active_subs = BillingSubscription.query.filter_by(status="active").all()
     active_count = len(active_subs)
     mrr = 0
+    basic_count = 0
+    pro_count = 0
     for sub in active_subs:
         if sub.plan == "basic":
             mrr += 59
+            basic_count += 1
         elif sub.plan == "pro":
             mrr += 99
+            pro_count += 1
+
+    # --- At-risk clients (past_due subscriptions) ---
+    at_risk_subs = BillingSubscription.query.filter_by(status="past_due").all()
+    at_risk_data = []
+    for sub in at_risk_subs:
+        ws = db.session.get(Workspace, sub.workspace_id)
+        if ws:
+            at_risk_data.append({"workspace": ws, "subscription": sub})
 
     # --- Open tickets ---
     open_tickets_count = Ticket.query.filter(
@@ -110,6 +124,9 @@ def dashboard():
         conversion_rate=conversion_rate,
         active_count=active_count,
         mrr=mrr,
+        basic_count=basic_count,
+        pro_count=pro_count,
+        at_risk_data=at_risk_data,
         open_tickets_count=open_tickets_count,
         pending_invites=pending_invites,
         recent_activity=recent_activity,
@@ -167,7 +184,7 @@ def prospect_new():
             return render_template("admin/prospect_new.html",
                                    form_data=request.form)
 
-        if source not in ["google_maps", "facebook", "referral", "other"]:
+        if source not in ["google_maps", "facebook", "yelp", "referral", "other"]:
             flash("Please select a valid source.", "error")
             return render_template("admin/prospect_new.html",
                                    form_data=request.form)
@@ -221,7 +238,10 @@ def prospect_detail(prospect_id):
         return redirect(url_for("admin.workspace_detail",
                                 workspace_id=prospect.workspace_id))
 
-    return render_template("admin/prospect_detail.html", prospect=prospect)
+    activities = prospect.activities.all()
+
+    return render_template("admin/prospect_detail.html",
+                           prospect=prospect, activities=activities)
 
 
 @admin_bp.route("/prospects/<prospect_id>/update", methods=["POST"])
@@ -233,15 +253,25 @@ def prospect_update(prospect_id):
         flash("Prospect not found.", "error")
         return redirect(url_for("admin.prospect_list"))
 
-    # Update fields
-    prospect.business_name = request.form.get("business_name", prospect.business_name).strip()
-    prospect.contact_name = request.form.get("contact_name", "").strip() or None
-    prospect.contact_email = request.form.get("contact_email", "").strip() or None
-    prospect.contact_phone = request.form.get("contact_phone", "").strip() or None
-    prospect.source = request.form.get("source", prospect.source).strip()
-    prospect.source_url = request.form.get("source_url", "").strip() or None
-    prospect.notes = request.form.get("notes", "").strip() or None
-    prospect.demo_url = request.form.get("demo_url", "").strip() or None
+    # Update fields — only overwrite if the field was actually submitted.
+    # Quick-action forms only send status + business_name + source,
+    # so we must not blank out fields that aren't in the POST body.
+    if "business_name" in request.form:
+        prospect.business_name = request.form["business_name"].strip() or prospect.business_name
+    if "contact_name" in request.form:
+        prospect.contact_name = request.form["contact_name"].strip() or None
+    if "contact_email" in request.form:
+        prospect.contact_email = request.form["contact_email"].strip() or None
+    if "contact_phone" in request.form:
+        prospect.contact_phone = request.form["contact_phone"].strip() or None
+    if "source" in request.form:
+        prospect.source = request.form["source"].strip() or prospect.source
+    if "source_url" in request.form:
+        prospect.source_url = request.form["source_url"].strip() or None
+    if "notes" in request.form:
+        prospect.notes = request.form["notes"].strip() or None
+    if "demo_url" in request.form:
+        prospect.demo_url = request.form["demo_url"].strip() or None
 
     # Status change
     new_status = request.form.get("status", "").strip()
@@ -262,6 +292,107 @@ def prospect_update(prospect_id):
 
     db.session.commit()
     flash("Prospect updated.", "success")
+    return redirect(url_for("admin.prospect_detail", prospect_id=prospect_id))
+
+
+@admin_bp.route("/prospects/<prospect_id>/activity", methods=["POST"])
+@admin_required
+def prospect_add_activity(prospect_id):
+    """Log an outreach activity on a prospect (email, text, call, note)."""
+    prospect = db.session.get(Prospect, prospect_id)
+    if prospect is None:
+        flash("Prospect not found.", "error")
+        return redirect(url_for("admin.prospect_list"))
+
+    activity_type = request.form.get("activity_type", "").strip()
+    note = request.form.get("note", "").strip() or None
+
+    if activity_type not in ProspectActivity.TYPES:
+        flash("Invalid activity type.", "error")
+        return redirect(url_for("admin.prospect_detail", prospect_id=prospect_id))
+
+    activity = ProspectActivity(
+        prospect_id=prospect_id,
+        activity_type=activity_type,
+        note=note,
+        actor_user_id=current_user.id,
+    )
+    db.session.add(activity)
+    db.session.commit()
+
+    label = activity_type.capitalize()
+    flash(f"{label} activity logged.", "success")
+    return redirect(url_for("admin.prospect_detail", prospect_id=prospect_id))
+
+
+@admin_bp.route("/prospects/<prospect_id>/send-outreach", methods=["POST"])
+@admin_required
+def prospect_send_outreach(prospect_id):
+    """Send an outreach email to a prospect and log the activity."""
+    prospect = db.session.get(Prospect, prospect_id)
+    if prospect is None:
+        flash("Prospect not found.", "error")
+        return redirect(url_for("admin.prospect_list"))
+
+    recipient_email = request.form.get("recipient_email", "").strip()
+    custom_message = request.form.get("custom_message", "").strip() or None
+
+    if not recipient_email:
+        flash("Recipient email is required.", "error")
+        return redirect(url_for("admin.prospect_detail", prospect_id=prospect_id))
+
+    send_email(
+        to=recipient_email,
+        subject=f"We built a website for {prospect.business_name}",
+        template="emails/prospect_outreach.html",
+        context={
+            "business_name": prospect.business_name,
+            "contact_name": prospect.contact_name,
+            "demo_url": prospect.demo_url,
+            "custom_message": custom_message,
+        },
+        reply_to=current_app.config.get("MAIL_FROM_ADDRESS"),
+    )
+
+    # Log activity
+    activity = ProspectActivity(
+        prospect_id=prospect_id,
+        activity_type="email",
+        note=f"Outreach email sent to {recipient_email}" + (f": {custom_message[:100]}" if custom_message else ""),
+        actor_user_id=current_user.id,
+    )
+    db.session.add(activity)
+
+    # Auto-advance to "pitched" if currently "site_built"
+    if prospect.status == "site_built":
+        old_status = prospect.status
+        prospect.status = "pitched"
+        db.session.add(AuditEvent(
+            actor_user_id=current_user.id,
+            action="prospect.status_changed",
+            metadata_={
+                "prospect_id": prospect_id,
+                "old_status": old_status,
+                "new_status": "pitched",
+                "reason": "auto — outreach email sent",
+            },
+        ))
+
+    # Audit log
+    audit = AuditEvent(
+        actor_user_id=current_user.id,
+        action="prospect.outreach_sent",
+        metadata_={
+            "prospect_id": prospect_id,
+            "recipient_email": recipient_email,
+            "business_name": prospect.business_name,
+        },
+    )
+    db.session.add(audit)
+    db.session.commit()
+
+    status_msg = " Status moved to Pitched." if prospect.status == "pitched" else ""
+    flash(f"Outreach email sent to {recipient_email}.{status_msg}", "success")
     return redirect(url_for("admin.prospect_detail", prospect_id=prospect_id))
 
 
@@ -369,6 +500,7 @@ def prospect_convert(prospect_id):
             site=site,
             invite=invite,
             invite_link=invite_link,
+            recipient_email=invite_email or prospect.contact_email,
         )
 
     return render_template("admin/workspace_convert.html",
@@ -672,12 +804,78 @@ def workspace_invite(workspace_id):
     invite_link = f"{base_url}/auth/register?token={invite.token}"
 
     flash(f"Invite link generated!", "success")
+
+    # Pre-populate recipient email from invite lock or prospect
+    recipient_email = invite_email
+    if not recipient_email and workspace.prospect_id:
+        prospect = db.session.get(Prospect, workspace.prospect_id)
+        if prospect:
+            recipient_email = prospect.contact_email
+
     return render_template(
         "admin/workspace_invite_success.html",
         workspace=workspace,
         invite=invite,
         invite_link=invite_link,
+        recipient_email=recipient_email,
     )
+
+
+@admin_bp.route("/workspaces/<workspace_id>/send-invite-email", methods=["POST"])
+@admin_required
+def send_invite_email(workspace_id):
+    """Send invite email to client with a custom message."""
+    workspace = db.session.get(Workspace, workspace_id)
+    if workspace is None:
+        flash("Workspace not found.", "error")
+        return redirect(url_for("admin.workspace_list"))
+
+    recipient_email = request.form.get("recipient_email", "").strip()
+    custom_message = request.form.get("custom_message", "").strip()
+    invite_link = request.form.get("invite_link", "").strip()
+
+    if not recipient_email:
+        flash("Recipient email is required.", "error")
+        return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id))
+
+    if not invite_link:
+        flash("Invite link is required.", "error")
+        return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id))
+
+    # Get prospect info for the email
+    prospect = None
+    if workspace.prospect_id:
+        prospect = db.session.get(Prospect, workspace.prospect_id)
+
+    send_email(
+        to=recipient_email,
+        subject=f"Your website is ready — {workspace.name}",
+        template="emails/client_invite.html",
+        context={
+            "business_name": workspace.name,
+            "contact_name": prospect.contact_name if prospect else None,
+            "custom_message": custom_message,
+            "invite_link": invite_link,
+            "sender_name": current_user.full_name or "the team",
+        },
+        reply_to=current_app.config.get("MAIL_FROM_ADDRESS"),
+    )
+
+    # Audit log
+    audit = AuditEvent(
+        workspace_id=workspace.id,
+        actor_user_id=current_user.id,
+        action="invite.email_sent",
+        metadata_={
+            "recipient_email": recipient_email,
+            "invite_link": invite_link,
+        },
+    )
+    db.session.add(audit)
+    db.session.commit()
+
+    flash(f"Invite email sent to {recipient_email}.", "success")
+    return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id))
 
 
 # ══════════════════════════════════════════════
@@ -773,6 +971,28 @@ def ticket_reply(ticket_id):
             is_internal=is_internal,
         )
         db.session.commit()
+
+        # Send email to client for non-internal replies
+        if not is_internal:
+            # Find ticket author's email
+            author = db.session.get(User, ticket.author_user_id)
+            if author:
+                workspace = db.session.get(Workspace, ticket.workspace_id)
+                site = workspace.sites.first() if workspace else None
+                site_slug = site.site_slug if site else ""
+                base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5001")
+                send_email(
+                    to=author.email,
+                    subject=f"Update on your request: {ticket.subject}",
+                    template="emails/ticket_reply_to_client.html",
+                    context={
+                        "ticket_subject": ticket.subject,
+                        "reply_message": message,
+                        "ticket_url": f"{base_url}/{site_slug}/tickets/{ticket_id}",
+                    },
+                    reply_to=current_app.config.get("MAIL_FROM_ADDRESS"),
+                )
+
         if is_internal:
             flash("Internal note added.", "success")
         else:

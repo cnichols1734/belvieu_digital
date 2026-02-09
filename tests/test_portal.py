@@ -78,7 +78,7 @@ class TestDashboard:
 
         resp = client.get("/test-pizza/dashboard")
         assert resp.status_code == 200
-        assert b"Choose your plan" in resp.data
+        assert b"Welcome to Belvieu Digital" in resp.data
 
     def test_dashboard_active_subscription(self, client, seed_data, app):
         """Dashboard with active subscription -> full dashboard."""

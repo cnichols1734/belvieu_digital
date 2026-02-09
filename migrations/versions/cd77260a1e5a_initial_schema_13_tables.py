@@ -33,15 +33,15 @@ def upgrade():
     sa.Column('demo_url', sa.String(length=500), nullable=True),
     sa.Column('status', sa.String(length=50), nullable=False),
     sa.Column('workspace_id', sa.String(length=36), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('stripe_events',
     sa.Column('id', sa.String(length=36), nullable=False),
     sa.Column('stripe_event_id', sa.String(length=255), nullable=False),
     sa.Column('event_type', sa.String(length=255), nullable=False),
-    sa.Column('processed_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('processed_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('stripe_event_id')
     )
@@ -52,8 +52,8 @@ def upgrade():
     sa.Column('full_name', sa.String(length=255), nullable=True),
     sa.Column('is_admin', sa.Boolean(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email')
     )
@@ -61,7 +61,7 @@ def upgrade():
     sa.Column('id', sa.String(length=36), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('prospect_id', sa.String(length=36), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
 
@@ -76,7 +76,7 @@ def upgrade():
     sa.Column('actor_user_id', sa.String(length=36), nullable=True),
     sa.Column('action', sa.String(length=255), nullable=False),
     sa.Column('metadata', sa.JSON(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
     sa.ForeignKeyConstraint(['actor_user_id'], ['users.id'], ),
     sa.ForeignKeyConstraint(['workspace_id'], ['workspaces.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -85,7 +85,7 @@ def upgrade():
     sa.Column('id', sa.String(length=36), nullable=False),
     sa.Column('workspace_id', sa.String(length=36), nullable=False),
     sa.Column('stripe_customer_id', sa.String(length=255), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
     sa.ForeignKeyConstraint(['workspace_id'], ['workspaces.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('stripe_customer_id'),
@@ -100,8 +100,8 @@ def upgrade():
     sa.Column('status', sa.String(length=50), nullable=False),
     sa.Column('current_period_end', sa.DateTime(timezone=True), nullable=True),
     sa.Column('cancel_at_period_end', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
     sa.ForeignKeyConstraint(['workspace_id'], ['workspaces.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('stripe_subscription_id')
@@ -114,8 +114,8 @@ def upgrade():
     sa.Column('published_url', sa.String(length=500), nullable=True),
     sa.Column('custom_domain', sa.String(length=255), nullable=True),
     sa.Column('status', sa.String(length=50), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
     sa.ForeignKeyConstraint(['workspace_id'], ['workspaces.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('site_slug')
@@ -125,7 +125,7 @@ def upgrade():
     sa.Column('user_id', sa.String(length=36), nullable=False),
     sa.Column('workspace_id', sa.String(length=36), nullable=False),
     sa.Column('role', sa.String(length=50), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.ForeignKeyConstraint(['workspace_id'], ['workspaces.id'], ),
     sa.PrimaryKeyConstraint('id'),
@@ -138,8 +138,8 @@ def upgrade():
     sa.Column('plan_features', sa.JSON(), nullable=True),
     sa.Column('update_allowance', sa.Integer(), nullable=True),
     sa.Column('notification_prefs', sa.JSON(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
     sa.ForeignKeyConstraint(['workspace_id'], ['workspaces.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('workspace_id')
@@ -155,9 +155,9 @@ def upgrade():
     sa.Column('category', sa.String(length=50), nullable=True),
     sa.Column('status', sa.String(length=50), nullable=False),
     sa.Column('priority', sa.String(length=50), nullable=False),
-    sa.Column('last_activity_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('last_activity_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
     sa.ForeignKeyConstraint(['assigned_to_user_id'], ['users.id'], ),
     sa.ForeignKeyConstraint(['author_user_id'], ['users.id'], ),
     sa.ForeignKeyConstraint(['site_id'], ['sites.id'], ),
@@ -172,7 +172,7 @@ def upgrade():
     sa.Column('token', sa.String(length=64), nullable=False),
     sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('used_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
     sa.ForeignKeyConstraint(['site_id'], ['sites.id'], ),
     sa.ForeignKeyConstraint(['workspace_id'], ['workspaces.id'], ),
     sa.PrimaryKeyConstraint('id'),
@@ -184,7 +184,7 @@ def upgrade():
     sa.Column('author_user_id', sa.String(length=36), nullable=False),
     sa.Column('message', sa.Text(), nullable=False),
     sa.Column('is_internal', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
     sa.ForeignKeyConstraint(['author_user_id'], ['users.id'], ),
     sa.ForeignKeyConstraint(['ticket_id'], ['tickets.id'], ),
     sa.PrimaryKeyConstraint('id')

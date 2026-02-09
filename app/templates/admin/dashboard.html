@@ -16,9 +16,11 @@
         <div class="stat-detail">Total prospects</div>
     </div>
     <div class="stat-card">
-        <div class="stat-label">Active Subscriptions</div>
-        <div class="stat-value">{{ active_count }}</div>
-        <div class="stat-detail">${{ mrr }}/mo MRR</div>
+        <div class="stat-label">Monthly Revenue</div>
+        <div class="stat-value">${{ mrr }}</div>
+        <div class="stat-detail">
+            {{ basic_count }} Basic &middot; {{ pro_count }} Pro
+        </div>
     </div>
     <div class="stat-card">
         <div class="stat-label">Open Tickets</div>
@@ -28,18 +30,37 @@
     <div class="stat-card">
         <div class="stat-label">Conversion Rate</div>
         <div class="stat-value">{{ conversion_rate }}%</div>
-        <div class="stat-detail">Pitched → Converted</div>
+        <div class="stat-detail">Pitched &rarr; Converted</div>
     </div>
 </div>
 
 <!-- Content Grid -->
 <div class="content-grid">
-    <!-- Pipeline Breakdown -->
+    <!-- Pipeline Breakdown with Visual Bar -->
     <div class="card">
         <div class="card-header">
             <span>Prospect Pipeline</span>
             <a href="{{ url_for('admin.prospect_list') }}" class="btn btn-sm btn-secondary">View all</a>
         </div>
+
+        {# Pipeline visualization bar #}
+        {% if total_prospects > 0 %}
+        <div style="display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 1rem; background: var(--color-bg-subtle, #f5f5f5);">
+            {% set stages = [
+                ('researching', pipeline_counts.get('researching', 0), '#737373'),
+                ('site_built', pipeline_counts.get('site_built', 0), '#3b82f6'),
+                ('pitched', pipeline_counts.get('pitched', 0), '#f59e0b'),
+                ('converted', pipeline_counts.get('converted', 0), '#22c55e'),
+                ('declined', pipeline_counts.get('declined', 0), '#ef4444')
+            ] %}
+            {% for name, count, color in stages %}
+                {% if count > 0 %}
+                <div style="width: {{ (count / total_prospects * 100)|round(1) }}%; background: {{ color }};" title="{{ name|replace('_', ' ')|title }}: {{ count }}"></div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+
         <div class="admin-pipeline-list">
             {% for status in ['researching', 'site_built', 'pitched', 'converted', 'declined'] %}
             <a href="{{ url_for('admin.prospect_list', status=status) }}" class="admin-pipeline-row">
@@ -55,7 +76,7 @@
         </div>
     </div>
 
-    <!-- Quick Actions & Pending -->
+    <!-- Quick Actions & Revenue & Pending -->
     <div class="card">
         <div class="card-header">Quick Actions</div>
         <div class="admin-actions-list">
@@ -69,6 +90,31 @@
                 View All Tickets
             </a>
         </div>
+
+        {# MRR Breakdown #}
+        {% if basic_count > 0 or pro_count > 0 %}
+        <hr class="divider">
+        <div class="card-header" style="padding-top: 0;">Revenue Breakdown</div>
+        <div style="font-size: 0.85rem;">
+            {% if basic_count > 0 %}
+            <div class="admin-detail-row">
+                <span class="text-muted">{{ basic_count }} Basic</span>
+                <span class="font-medium">${{ basic_count * 59 }}/mo</span>
+            </div>
+            {% endif %}
+            {% if pro_count > 0 %}
+            <div class="admin-detail-row">
+                <span class="text-muted">{{ pro_count }} Pro</span>
+                <span class="font-medium">${{ pro_count * 99 }}/mo</span>
+            </div>
+            {% endif %}
+            <div class="admin-detail-row" style="border-top: 1px solid var(--color-border-light, #e5e5e5); padding-top: 0.5rem; margin-top: 0.25rem;">
+                <span class="font-medium">Total MRR</span>
+                <span class="font-semibold">${{ mrr }}/mo</span>
+            </div>
+        </div>
+        {% endif %}
+
         {% if pending_invites > 0 %}
         <hr class="divider">
         <div class="admin-pending-stat">
@@ -78,6 +124,30 @@
         {% endif %}
     </div>
 </div>
+
+{# ── At-Risk Clients ── #}
+{% if at_risk_data %}
+<div class="card mt-2" style="border-color: var(--yellow-200, #fde68a);">
+    <div class="card-header">
+        <span style="color: var(--yellow-700, #a16207);">
+            <svg style="width: 16px; height: 16px; vertical-align: -2px; margin-right: 4px;" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+            At-Risk Clients ({{ at_risk_data|length }})
+        </span>
+    </div>
+    <p class="text-sm text-muted" style="margin-bottom: 0.75rem;">These clients have past-due payments and may churn.</p>
+    {% for item in at_risk_data %}
+    <div class="admin-detail-row">
+        <div>
+            <a href="{{ url_for('admin.workspace_detail', workspace_id=item.workspace.id) }}" class="font-medium">{{ item.workspace.name }}</a>
+            <span class="badge badge-past_due" style="margin-left: 0.5rem;"><span class="badge-dot"></span> Past Due</span>
+        </div>
+        <span class="text-muted text-sm">{{ item.subscription.plan|capitalize if item.subscription.plan else '' }}</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 
 <!-- Recent Activity -->
 <div class="card mt-3">

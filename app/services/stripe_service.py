@@ -29,6 +29,29 @@ from app.services.billing_service import (
 logger = logging.getLogger(__name__)
 
 
+def _extract_period_end(sub_data):
+    """Extract current_period_end from a Stripe subscription object.
+
+    In newer Stripe API versions, current_period_end has moved from the
+    subscription top level to items.data[0].current_period_end.
+    This helper checks both locations.
+
+    Returns a timezone-aware datetime or None.
+    """
+    # Try top-level first (older API versions / webhook payloads)
+    ts = sub_data.get("current_period_end")
+
+    # Fall back to items.data[0].current_period_end (newer SDK)
+    if not ts:
+        items = sub_data.get("items")
+        if items and items.get("data") and len(items["data"]) > 0:
+            ts = items["data"][0].get("current_period_end")
+
+    if ts:
+        return datetime.fromtimestamp(ts, tz=timezone.utc)
+    return None
+
+
 # ──────────────────────────────────────────────
 # Checkout & Portal Sessions
 # ──────────────────────────────────────────────
@@ -206,11 +229,7 @@ def _handle_checkout_completed(event):
     if sub.get("items") and sub["items"].get("data"):
         stripe_price_id = sub["items"]["data"][0].get("price", {}).get("id")
 
-    current_period_end = None
-    if sub.get("current_period_end"):
-        current_period_end = datetime.fromtimestamp(
-            sub["current_period_end"], tz=timezone.utc
-        )
+    current_period_end = _extract_period_end(sub)
 
     upsert_subscription(
         workspace_id=workspace_id,
@@ -260,11 +279,7 @@ def _handle_subscription_updated(event):
     if sub_data.get("items") and sub_data["items"].get("data"):
         stripe_price_id = sub_data["items"]["data"][0].get("price", {}).get("id")
 
-    current_period_end = None
-    if sub_data.get("current_period_end"):
-        current_period_end = datetime.fromtimestamp(
-            sub_data["current_period_end"], tz=timezone.utc
-        )
+    current_period_end = _extract_period_end(sub_data)
 
     status = sub_data.get("status", "active")
 
