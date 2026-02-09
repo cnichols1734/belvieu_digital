@@ -30,7 +30,7 @@ class Prospect(db.Model):
     contact_phone = db.Column(db.String(50), nullable=True)
     source = db.Column(
         db.String(50), nullable=False
-    )  # google_maps | facebook | referral | other
+    )  # google_maps | facebook | yelp | referral | other
     source_url = db.Column(
         db.String(500), nullable=True
     )  # link to Maps/FB listing

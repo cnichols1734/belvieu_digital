@@ -264,32 +264,57 @@ img { max-width: 100%; }
     gap: 1rem;
 }
 
-/* ─── Flash Messages ─── */
+/* ─── Flash Messages (Toast Overlay) ─── */
 .flash-container {
-    margin-bottom: 1.5rem;
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 9000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 420px;
+    width: calc(100% - 2rem);
+    pointer-events: none;
 }
 
 .flash {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.7rem 1rem;
+    padding: 0.75rem 1rem;
     border-radius: var(--radius);
-    margin-bottom: 0.5rem;
     font-size: 13px;
     font-weight: 500;
     border: 1px solid transparent;
-    animation: flash-in 0.25s ease-out;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10), 0 1px 4px rgba(0, 0, 0, 0.06);
+    pointer-events: auto;
+    animation: flash-slide-in 0.3s ease-out;
 }
 
-@keyframes flash-in {
+.flash.flash-dismissing {
+    animation: flash-slide-out 0.3s ease-in forwards;
+}
+
+@keyframes flash-slide-in {
     from {
         opacity: 0;
-        transform: translateY(-4px);
+        transform: translateX(40px);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateX(0);
+    }
+}
+
+@keyframes flash-slide-out {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(40px);
     }
 }
 
@@ -950,23 +975,347 @@ select.form-control {
     margin-top: 0.5rem;
 }
 
-/* ─── Dashboard Specific ─── */
-.dashboard-welcome {
-    margin-bottom: 2rem;
+/* ─── Client Dashboard ─── */
+
+/* Header */
+.dash-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1.75rem;
 }
 
-.dashboard-welcome h1 {
-    font-size: 24px;
-    font-weight: 600;
-    letter-spacing: -0.025em;
-    margin-bottom: 0.25rem;
+.dash-title {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 0.15rem;
+    color: var(--gray-900);
 }
 
-.dashboard-welcome p {
+.dash-subtitle {
     font-size: 14px;
     color: var(--color-text-secondary);
 }
 
+.dash-plan-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.85rem;
+    border: 1px solid var(--color-border);
+    border-radius: 100px;
+    background: var(--color-surface);
+    white-space: nowrap;
+}
+
+.dash-plan-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-800);
+}
+
+.dash-plan-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.dash-plan-active  { color: var(--green-600); }
+.dash-plan-trial   { color: var(--blue-500); }
+.dash-plan-pastdue { color: var(--yellow-500); }
+
+/* Site Preview Card */
+.dash-site-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+.dash-site-preview {
+    display: block;
+    position: relative;
+    height: 260px;
+    overflow: hidden;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--color-border-light);
+    text-decoration: none;
+}
+
+.dash-site-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    display: block;
+}
+
+.dash-site-preview-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    color: #fff;
+    opacity: 0;
+}
+
+.dash-site-preview:hover .dash-site-preview-overlay {
+    background: rgba(0, 0, 0, 0.25);
+    opacity: 1;
+}
+
+/* Fallback when screenshot fails to load */
+.dash-site-preview-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gray-50);
+}
+
+.dash-site-preview-fallback img {
+    display: none;
+}
+
+.dash-site-preview-fallback .dash-site-preview-overlay {
+    position: relative;
+    opacity: 1;
+    background: none;
+    color: var(--gray-400);
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.dash-site-preview-fallback .dash-site-preview-overlay::after {
+    content: 'Click to visit your website';
+    font-size: 13px;
+    color: var(--gray-400);
+}
+
+.dash-site-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+}
+
+.dash-site-info-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.dash-site-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-800);
+}
+
+.dash-site-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 13px;
+}
+
+.dash-site-domain {
+    color: var(--color-text-secondary);
+}
+
+/* Info Cards Grid */
+.dash-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.dash-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.dash-card-wide {
+    grid-column: 1 / -1;
+}
+
+.dash-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.dash-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-700);
+    letter-spacing: 0.01em;
+}
+
+.dash-card-count {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    background: var(--gray-100);
+    padding: 0.1rem 0.5rem;
+    border-radius: 100px;
+}
+
+.dash-card-action {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    padding: 0;
+}
+
+.dash-card-action:hover {
+    color: var(--gray-800);
+}
+
+.dash-card-body {
+    padding: 1rem 1.25rem;
+}
+
+/* Detail rows */
+.dash-detail {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+}
+
+.dash-detail:not(:last-child) {
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.dash-detail-label {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+}
+
+.dash-detail-value {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-800);
+}
+
+/* Team member */
+.dash-team-member {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 0;
+}
+
+.dash-team-member:not(:last-child) {
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.dash-team-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--gray-900);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.dash-team-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.dash-team-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-800);
+}
+
+.dash-team-email {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+}
+
+/* Ticket rows */
+.dash-ticket {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.7rem 0;
+    text-decoration: none;
+    color: inherit;
+}
+
+.dash-ticket:not(:last-of-type) {
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.dash-ticket:hover .dash-ticket-subject {
+    color: var(--gray-900);
+}
+
+.dash-ticket-left {
+    min-width: 0;
+    flex: 1;
+}
+
+.dash-ticket-subject {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-700);
+    transition: color 0.15s;
+}
+
+.dash-ticket-meta {
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+    margin-top: 0.1rem;
+}
+
+/* Empty state */
+.dash-empty {
+    text-align: center;
+    padding: 1.5rem 0.5rem;
+}
+
+.dash-empty-icon {
+    width: 32px;
+    height: 32px;
+    color: var(--gray-300);
+    margin: 0 auto 0.75rem;
+}
+
+.dash-empty-text {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    margin-bottom: 0.2rem;
+}
+
+.dash-empty-hint {
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+}
+
+/* Legacy compat — keep subscription-card for other pages */
 .subscription-card {
     display: flex;
     align-items: center;
@@ -992,6 +1341,28 @@ select.form-control {
 .subscription-renewal {
     font-size: 13px;
     color: var(--color-text-secondary);
+}
+
+/* Dashboard responsive */
+@media (max-width: 768px) {
+    .dash-header {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .dash-site-preview {
+        height: 180px;
+    }
+
+    .dash-site-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .dash-cards {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* ─── Auth Pages ─── */
@@ -1453,6 +1824,7 @@ select.form-control {
 /* ─── Admin Badge Colors for Source ─── */
 .badge-google_maps  { background: var(--blue-50); color: var(--blue-700); }
 .badge-facebook     { background: var(--blue-50); color: var(--blue-700); }
+.badge-yelp         { background: #fef3f2; color: #c4320a; }
 .badge-referral     { background: var(--green-50); color: var(--green-700); }
 .badge-other        { background: var(--gray-100); color: var(--gray-600); }
 

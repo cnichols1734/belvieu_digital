@@ -200,7 +200,7 @@ class TestBilling:
 
         resp = client.get("/test-pizza/billing")
         assert resp.status_code == 200
-        assert b"Choose your plan" in resp.data
+        assert b"Welcome to Belvieu Digital" in resp.data
 
     # ── Auth Guards ──
 

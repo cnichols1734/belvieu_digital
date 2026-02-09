@@ -12,6 +12,7 @@ Ticket routes:
 
 from flask import (
     Blueprint,
+    current_app,
     flash,
     g,
     redirect,
@@ -27,6 +28,7 @@ from app.models.ticket import Ticket
 from app.models.workspace import WorkspaceMember
 from app.models.user import User
 from app.services import ticket_service
+from app.services.email_service import send_email
 
 portal_bp = Blueprint("portal", __name__)
 
@@ -54,6 +56,21 @@ def dashboard(site_slug):
     access = g.access_level
 
     # No subscription yet — show subscribe page
+    # But if they just came from checkout, re-check the DB fresh
+    # (the webhook may have arrived between the redirect and this request)
+    if access == "subscribe" and request.args.get("from") == "checkout":
+        from app.models.billing import BillingSubscription
+        fresh_sub = (
+            BillingSubscription.query
+            .filter_by(workspace_id=g.workspace_id)
+            .order_by(BillingSubscription.created_at.desc())
+            .first()
+        )
+        if fresh_sub and fresh_sub.status in ("active", "trialing"):
+            g.subscription = fresh_sub
+            g.access_level = "full"
+            access = "full"
+
     if access == "subscribe":
         return render_template("portal/subscribe.html")
 
@@ -144,6 +161,26 @@ def ticket_new(site_slug):
                 category=category,
             )
             db.session.commit()
+
+            # Email notification to admin
+            admin_email = current_app.config.get("MAIL_CONTACT_TO", "info@belvieudigital.com")
+            base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5001")
+            send_email(
+                to=admin_email,
+                subject=f"New ticket from {g.workspace.name}: {subject}",
+                template="emails/ticket_new_notification.html",
+                context={
+                    "ticket_subject": subject,
+                    "ticket_description": description,
+                    "ticket_category": category,
+                    "workspace_name": g.workspace.name,
+                    "author_name": current_user.full_name,
+                    "author_email": current_user.email,
+                    "ticket_url": f"{base_url}/admin/tickets/{ticket.id}",
+                },
+                reply_to=current_user.email,
+            )
+
             flash("Ticket created successfully.", "success")
             return redirect(
                 url_for("portal.ticket_detail", site_slug=site_slug, ticket_id=ticket.id)
@@ -217,6 +254,25 @@ def ticket_reply(site_slug, ticket_id):
             is_internal=False,  # client replies are never internal
         )
         db.session.commit()
+
+        # Email notification to admin
+        admin_email = current_app.config.get("MAIL_CONTACT_TO", "info@belvieudigital.com")
+        base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5001")
+        send_email(
+            to=admin_email,
+            subject=f"Reply from {g.workspace.name}: {ticket.subject}",
+            template="emails/ticket_reply_to_admin.html",
+            context={
+                "ticket_subject": ticket.subject,
+                "reply_message": message,
+                "workspace_name": g.workspace.name,
+                "author_name": current_user.full_name,
+                "author_email": current_user.email,
+                "ticket_url": f"{base_url}/admin/tickets/{ticket_id}",
+            },
+            reply_to=current_user.email,
+        )
+
         flash("Reply added.", "success")
     except ValueError as e:
         flash(str(e), "error")

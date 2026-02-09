@@ -1,0 +1,58 @@
+{% extends "emails/base.html" %}
+
+{% block title %}New Ticket: {{ ticket_subject }}{% endblock %}
+
+{% block content %}
+<h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #1a1a1a; line-height: 1.3;">
+  New support ticket
+</h1>
+<p style="margin: 0 0 24px; font-size: 15px; line-height: 1.7; color: #737373;">
+  {{ author_name or author_email }} from <strong>{{ workspace_name }}</strong> submitted a new ticket.
+</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #fafafa; border-radius: 6px; border: 1px solid #f0f0f0;">
+  <tr>
+    <td style="padding: 20px 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="padding-bottom: 16px;">
+            <p style="margin: 0 0 2px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #999999;">Subject</p>
+            <p style="margin: 0; font-size: 15px; color: #1a1a1a; font-weight: 500;">{{ ticket_subject }}</p>
+          </td>
+        </tr>
+        {% if ticket_category %}
+        <tr>
+          <td style="padding-bottom: 16px;">
+            <p style="margin: 0 0 2px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #999999;">Category</p>
+            <p style="margin: 0; font-size: 15px; color: #1a1a1a;">{{ ticket_category | replace('_', ' ') | title }}</p>
+          </td>
+        </tr>
+        {% endif %}
+        <tr>
+          <td>
+            <p style="margin: 0 0 2px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #999999;">Description</p>
+            <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555; white-space: pre-line;">{{ ticket_description }}</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<!-- CTA Button -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 24px 0 0;">
+  <tr>
+    <td align="center">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="background-color: #1a1a1a; border-radius: 6px;">
+            <a href="{{ ticket_url }}" target="_blank" style="display: inline-block; padding: 12px 28px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 6px;">
+              View Ticket in Admin
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+{% endblock %}
