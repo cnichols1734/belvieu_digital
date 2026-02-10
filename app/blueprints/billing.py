@@ -42,7 +42,7 @@ def checkout(site_slug):
     """Create a Stripe Checkout Session and redirect to Stripe.
 
     Single-plan checkout: $250 one-time setup fee + $59/mo subscription
-    with a 30-day free trial on the recurring charge.
+    with first recurring charge deferred 30 days (first month free).
     Accessible even when access_level is 'subscribe' or 'blocked'.
     """
     try:

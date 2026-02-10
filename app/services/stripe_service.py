@@ -58,13 +58,14 @@ def _extract_period_end(sub_data):
 # ──────────────────────────────────────────────
 
 def create_checkout_session(workspace_id, site_id, site_slug):
-    """Create a Stripe Checkout Session for subscription + one-time setup fee.
+    """Create a Stripe Checkout Session for subscription + setup fee.
 
     Gets or creates a Stripe Customer for this workspace, then creates
     a checkout session with:
-      - One-time $250 setup fee (STRIPE_SETUP_PRICE_ID)
+      - $191 setup fee (STRIPE_SETUP_PRICE_ID) + $59 first month
+        = $250 total at checkout (matches advertised price)
       - Recurring $59/mo subscription (STRIPE_BASIC_PRICE_ID)
-      - 30-day trial so the first $59 charge doesn't hit until month 2
+      - No trial — Stripe shows "Subscribe" not "Start trial"
 
     Returns the Stripe checkout session URL.
     Raises stripe.error.StripeError on API failures.
@@ -92,22 +93,25 @@ def create_checkout_session(workspace_id, site_id, site_slug):
         stripe_customer_id = customer.id
         get_or_create_billing_customer(workspace_id, stripe_customer_id)
 
-    # Create checkout session with setup fee + recurring subscription
+    # Create checkout session: $191 setup fee + $59 first month = $250 total.
+    # No trial — Stripe shows "Subscribe" instead of "Start trial".
     session = stripe.checkout.Session.create(
         mode="subscription",
         customer=stripe_customer_id,
         line_items=[
-            {"price": setup_price_id, "quantity": 1},   # $250 one-time setup fee
+            {"price": setup_price_id, "quantity": 1},   # $191 one-time setup fee
             {"price": basic_price_id, "quantity": 1},    # $59/mo recurring
         ],
-        subscription_data={
-            "trial_period_days": 30,  # First month of hosting free
-        },
         success_url=(
             f"{app_base_url}/{site_slug}/billing/success"
             f"?session_id={{CHECKOUT_SESSION_ID}}"
         ),
         cancel_url=f"{app_base_url}/{site_slug}/billing/cancel",
+        custom_text={
+            "submit": {
+                "message": "Your $59/month subscription begins 30 days from today."
+            },
+        },
         metadata={
             "workspace_id": str(workspace_id),
             "site_id": str(site_id),

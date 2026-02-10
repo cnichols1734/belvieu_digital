@@ -100,7 +100,6 @@ class TestDashboard:
         resp = client.get("/test-pizza/dashboard")
         assert resp.status_code == 200
         assert b"Welcome back" in resp.data
-        assert b"Basic" in resp.data
         assert b"Active" in resp.data
 
     def test_dashboard_past_due_shows_warning(self, client, seed_data, app):

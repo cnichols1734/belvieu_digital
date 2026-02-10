@@ -10,14 +10,17 @@
 {% if custom_message %}
 <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.7; color: #555555; white-space: pre-line;">{{ custom_message }}</p>
 {% else %}
-<p style="margin: 0 0 24px; font-size: 15px; line-height: 1.7; color: #737373;">
-  Hi{{ ' ' + contact_name.split(' ')[0] if contact_name else '' }}, I noticed <strong>{{ business_name }}</strong> doesn't have a website yet (or could use a refresh). So I went ahead and built a free demo — no strings attached.
+<p style="margin: 0 0 16px; font-size: 15px; line-height: 1.7; color: #555555;">
+  Hi{{ ' ' + contact_name.split(' ')[0] if contact_name else '' }}, I'm Chris Nichols with Belvieu Digital, local here in Mont Belvieu.
+</p>
+<p style="margin: 0 0 24px; font-size: 15px; line-height: 1.7; color: #555555;">
+  I noticed <strong style="color: #1a1a1a;">{{ business_name }}</strong> doesn't have a website, so I went ahead and built one. Take a look:
 </p>
 {% endif %}
 
 {% if demo_url %}
 <!-- Demo Site CTA Button -->
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 28px;">
   <tr>
     <td align="center">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
@@ -32,6 +35,11 @@
     </td>
   </tr>
 </table>
+
+<!-- Portal explanation -->
+<p style="margin: 0 0 24px; font-size: 15px; line-height: 1.7; color: #555555;">
+  I put this together based on what I know about your business, but it's yours to shape. Once you subscribe, you get access to a client portal where you can request any changes (new photos, updated hours, different wording, you name it). Most updates are done within a few days.
+</p>
 {% endif %}
 
 <!-- What's Included -->
@@ -39,27 +47,34 @@
   <tr>
     <td style="padding: 20px 24px;">
       <p style="margin: 0 0 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #999999;">
-        What's included
+        What you get
       </p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
           <td style="padding: 6px 0;">
             <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555;">
-              &#10003; Custom-designed website for your business
+              &#10003; A custom website, designed and ready to go live
             </p>
           </td>
         </tr>
         <tr>
           <td style="padding: 6px 0;">
             <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555;">
-              &#10003; Hosting, security, and updates all included
+              &#10003; Hosting, security, and ongoing maintenance (all handled)
             </p>
           </td>
         </tr>
         <tr>
           <td style="padding: 6px 0;">
             <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555;">
-              &#10003; One-time $250 setup fee &mdash; first month of hosting free, then $59/month. No contracts.
+              &#10003; Up to 4 content updates per month through your client portal
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0;">
+            <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555;">
+              &#10003; No contracts (cancel anytime)
             </p>
           </td>
         </tr>
@@ -69,20 +84,23 @@
 </table>
 
 {% if invite_link %}
-<!-- Ready to Go Live Section -->
-<p style="margin: 24px 0 12px; font-size: 15px; line-height: 1.7; color: #555555;">
-  Like what you see? You can get started right now — no need to wait:
+<!-- Pricing Section -->
+<p style="margin: 24px 0 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #999999;">
+  Pricing
+</p>
+<p style="margin: 0 0 20px; font-size: 15px; line-height: 1.7; color: #555555;">
+  <strong style="color: #1a1a1a;">$250 to get started</strong> (includes your first month), then <strong style="color: #1a1a1a;">$59/mo</strong> after that.
 </p>
 
-<!-- Get Started CTA Button -->
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px;">
+<!-- Subscribe CTA Button -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 28px;">
   <tr>
     <td align="center">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr>
           <td style="background-color: #1a1a1a; border-radius: 6px;">
             <a href="{{ invite_link }}" target="_blank" style="display: inline-block; padding: 14px 32px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 6px;">
-              Create Your Account &rarr;
+              Subscribe &amp; Go Live &rarr;
             </a>
           </td>
         </tr>
@@ -102,21 +120,21 @@
         <tr>
           <td style="padding: 8px 0;">
             <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555;">
-              <strong style="color: #1a1a1a;">1.</strong> Click "Create Your Account" above to set up your portal
+              <strong style="color: #1a1a1a;">1.</strong> Check out your demo site above
             </p>
           </td>
         </tr>
         <tr>
           <td style="padding: 8px 0;">
             <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555;">
-              <strong style="color: #1a1a1a;">2.</strong> Activate your subscription &mdash; $250 one-time setup, then $59/mo
+              <strong style="color: #1a1a1a;">2.</strong> Click "Subscribe & Go Live" to create your account and activate
             </p>
           </td>
         </tr>
         <tr>
           <td style="padding: 8px 0;">
             <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555;">
-              <strong style="color: #1a1a1a;">3.</strong> Your website goes live &mdash; we handle everything from there
+              <strong style="color: #1a1a1a;">3.</strong> Your site goes live (request any changes through your portal)
             </p>
           </td>
         </tr>
@@ -127,7 +145,7 @@
 {% endif %}
 
 <p style="margin: 24px 0 0; font-size: 14px; line-height: 1.7; color: #737373;">
-  No pressure — the demo is yours to review regardless. Questions? Just reply to this email.
+  No pressure at all. If you have questions, just reply to this email.
 </p>
 {% endblock %}
 
