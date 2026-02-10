@@ -290,3 +290,55 @@ def register_cli(app):
         click.echo("Add this to your environment variables:")
         click.echo(f"  STRIPE_SETUP_PRICE_ID={price.id}")
         click.echo("=" * 60)
+
+    @app.cli.command("verify-stripe-prices")
+    def verify_stripe_prices():
+        """Verify configured Stripe price IDs exist and are usable (same mode as key).
+
+        Uses STRIPE_SECRET_KEY, STRIPE_SETUP_PRICE_ID, STRIPE_BASIC_PRICE_ID from env.
+        Run with prod env vars to confirm Live prices; run with test vars for Test mode.
+        """
+        import stripe as _stripe
+
+        api_key = app.config.get("STRIPE_SECRET_KEY")
+        setup_id = app.config.get("STRIPE_SETUP_PRICE_ID")
+        basic_id = app.config.get("STRIPE_BASIC_PRICE_ID")
+
+        if not api_key:
+            click.echo("ERROR: STRIPE_SECRET_KEY is not set.")
+            return
+        key_mode = "Live" if api_key.startswith("sk_live_") else "Test"
+        click.echo(f"Stripe key mode: {key_mode}")
+        click.echo("")
+
+        _stripe.api_key = api_key
+
+        def check_price(label: str, price_id: str) -> None:
+            if not price_id:
+                click.echo(f"  {label}: (not set)")
+                return
+            try:
+                price = _stripe.Price.retrieve(price_id, expand=["product"])
+                product = price.get("product")
+                if isinstance(product, dict):
+                    product_active = product.get("active", "?")
+                else:
+                    prod_id = getattr(price, "product", None) or price.get("product")
+                    prod = _stripe.Product.retrieve(prod_id) if prod_id else None
+                    product_active = getattr(prod, "active", "?") if prod else "?"
+                livemode = getattr(price, "livemode", "?")
+                click.echo(f"  {label}: {price_id}")
+                click.echo(f"    exists=True, livemode={livemode}, product_active={product_active}")
+                if livemode is True and key_mode != "Live":
+                    click.echo("    WARNING: This price is Live but your key is Test.")
+                elif livemode is False and key_mode == "Live":
+                    click.echo("    WARNING: This price is Test but your key is Live.")
+            except _stripe.error.InvalidRequestError as e:
+                click.echo(f"  {label}: {price_id}")
+                click.echo(f"    ERROR: {e}")
+            click.echo("")
+
+        click.echo("STRIPE_SETUP_PRICE_ID (setup fee):")
+        check_price("setup", setup_id)
+        click.echo("STRIPE_BASIC_PRICE_ID (monthly):")
+        check_price("basic", basic_id)
