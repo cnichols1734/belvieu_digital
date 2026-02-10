@@ -12,7 +12,6 @@
     </div>
     {% if g.subscription %}
     <div class="dash-plan-pill">
-        <span class="dash-plan-name">{{ g.subscription.plan|capitalize if g.subscription.plan else 'Plan' }}</span>
         {% if g.subscription.status == 'active' %}
             <span class="dash-plan-status dash-plan-active"><span class="badge-dot"></span>Active</span>
         {% elif g.subscription.status == 'trialing' %}
@@ -101,10 +100,6 @@
         </div>
         <div class="dash-card-body">
             {% if g.subscription %}
-                <div class="dash-detail">
-                    <span class="dash-detail-label">Plan</span>
-                    <span class="dash-detail-value">{{ g.subscription.plan|capitalize if g.subscription.plan else '—' }}</span>
-                </div>
                 <div class="dash-detail">
                     <span class="dash-detail-label">Status</span>
                     <span class="dash-detail-value">
