@@ -83,6 +83,9 @@ def create_checkout_session(workspace_id, site_id, site_slug):
     if billing_customer:
         stripe_customer_id = billing_customer.stripe_customer_id
     else:
+        stripe_customer_id = None
+
+    if not stripe_customer_id:
         # Create a new Stripe customer
         customer = stripe.Customer.create(
             metadata={
@@ -93,31 +96,48 @@ def create_checkout_session(workspace_id, site_id, site_slug):
         stripe_customer_id = customer.id
         get_or_create_billing_customer(workspace_id, stripe_customer_id)
 
-    # Create checkout session: $191 setup fee + $59 first month = $250 total.
-    # No trial — Stripe shows "Subscribe" instead of "Start trial".
-    session = stripe.checkout.Session.create(
-        mode="subscription",
-        customer=stripe_customer_id,
-        line_items=[
-            {"price": setup_price_id, "quantity": 1},   # $191 one-time setup fee
-            {"price": basic_price_id, "quantity": 1},    # $59/mo recurring
-        ],
-        success_url=(
-            f"{app_base_url}/{site_slug}/billing/success"
-            f"?session_id={{CHECKOUT_SESSION_ID}}"
-        ),
-        cancel_url=f"{app_base_url}/{site_slug}/billing/cancel",
-        custom_text={
-            "submit": {
-                "message": "Your $59/month subscription begins 30 days from today."
+    def _create_session(customer_id):
+        return stripe.checkout.Session.create(
+            mode="subscription",
+            customer=customer_id,
+            line_items=[
+                {"price": setup_price_id, "quantity": 1},   # $191 one-time setup fee
+                {"price": basic_price_id, "quantity": 1},    # $59/mo recurring
+            ],
+            success_url=(
+                f"{app_base_url}/{site_slug}/billing/success"
+                f"?session_id={{CHECKOUT_SESSION_ID}}"
+            ),
+            cancel_url=f"{app_base_url}/{site_slug}/billing/cancel",
+            custom_text={
+                "submit": {
+                    "message": "Your $59/month subscription begins 30 days from today."
+                },
             },
-        },
-        metadata={
-            "workspace_id": str(workspace_id),
-            "site_id": str(site_id),
-            "site_slug": site_slug,
-        },
-    )
+            metadata={
+                "workspace_id": str(workspace_id),
+                "site_id": str(site_id),
+                "site_slug": site_slug,
+            },
+        )
+
+    try:
+        session = _create_session(stripe_customer_id)
+    except stripe.error.InvalidRequestError as e:
+        # Stored customer may be from Test mode or another account (e.g. after switching to Live)
+        if "No such customer" in str(e) and billing_customer:
+            customer = stripe.Customer.create(
+                metadata={
+                    "workspace_id": str(workspace_id),
+                    "site_slug": site_slug,
+                }
+            )
+            stripe_customer_id = customer.id
+            billing_customer.stripe_customer_id = stripe_customer_id
+            db.session.commit()
+            session = _create_session(stripe_customer_id)
+        else:
+            raise
 
     return session.url
 
