@@ -1,7 +1,7 @@
 """Billing service — DB sync helpers and entitlement logic.
 
 Responsible for:
-- Mapping Stripe price IDs to plan names (basic / pro)
+- Mapping Stripe price IDs to plan names
 - Upserting billing_subscriptions rows from Stripe webhook data
 - Deriving site.status from subscription status (presentation only)
 - Getting or creating BillingCustomer records
@@ -19,14 +19,13 @@ logger = logging.getLogger(__name__)
 
 
 def get_plan_from_price_id(price_id, app_config):
-    """Map a Stripe price ID to a plan name (basic / pro).
+    """Map a Stripe price ID to a plan name.
 
-    Returns None if the price_id doesn't match either configured plan.
+    Single tier: all subscriptions are 'basic' ($59/mo + $250 setup).
+    Returns None if the price_id doesn't match the configured plan.
     """
     if price_id == app_config.get("STRIPE_BASIC_PRICE_ID"):
         return "basic"
-    elif price_id == app_config.get("STRIPE_PRO_PRICE_ID"):
-        return "pro"
     return None
 
 

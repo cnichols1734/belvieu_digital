@@ -16,7 +16,7 @@
 {% endif %}
 
 {% if demo_url %}
-<!-- CTA Button -->
+<!-- Demo Site CTA Button -->
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px;">
   <tr>
     <td align="center">
@@ -34,6 +34,7 @@
 </table>
 {% endif %}
 
+<!-- What's Included -->
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #fafafa; border-radius: 6px; border: 1px solid #f0f0f0;">
   <tr>
     <td style="padding: 20px 24px;">
@@ -58,7 +59,7 @@
         <tr>
           <td style="padding: 6px 0;">
             <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555;">
-              &#10003; Plans starting at $59/month — no contracts
+              &#10003; One-time $250 setup fee &mdash; first month of hosting free, then $59/month. No contracts.
             </p>
           </td>
         </tr>
@@ -67,8 +68,66 @@
   </tr>
 </table>
 
+{% if invite_link %}
+<!-- Ready to Go Live Section -->
+<p style="margin: 24px 0 12px; font-size: 15px; line-height: 1.7; color: #555555;">
+  Like what you see? You can get started right now — no need to wait:
+</p>
+
+<!-- Get Started CTA Button -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px;">
+  <tr>
+    <td align="center">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="background-color: #1a1a1a; border-radius: 6px;">
+            <a href="{{ invite_link }}" target="_blank" style="display: inline-block; padding: 14px 32px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 6px;">
+              Create Your Account &rarr;
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<!-- How It Works -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #fafafa; border-radius: 6px; border: 1px solid #f0f0f0;">
+  <tr>
+    <td style="padding: 20px 24px;">
+      <p style="margin: 0 0 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #999999;">
+        How it works
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="padding: 8px 0;">
+            <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555;">
+              <strong style="color: #1a1a1a;">1.</strong> Click "Create Your Account" above to set up your portal
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0;">
+            <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555;">
+              <strong style="color: #1a1a1a;">2.</strong> Activate your subscription &mdash; $250 one-time setup, then $59/mo
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0;">
+            <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555;">
+              <strong style="color: #1a1a1a;">3.</strong> Your website goes live &mdash; we handle everything from there
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+{% endif %}
+
 <p style="margin: 24px 0 0; font-size: 14px; line-height: 1.7; color: #737373;">
-  If you like what you see, just reply to this email and we can get you set up. No pressure — the demo is yours to review regardless.
+  No pressure — the demo is yours to review regardless. Questions? Just reply to this email.
 </p>
 {% endblock %}
 

@@ -257,7 +257,7 @@ def forgot_password():
             db.session.commit()
 
             # Send reset email
-            base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5001")
+            base_url = current_app.config["APP_BASE_URL"]
             reset_link = f"{base_url}/auth/reset-password?token={token}"
 
             send_email(

@@ -74,7 +74,7 @@ class TestBilling:
 
     @patch("app.services.stripe_service.stripe")
     def test_checkout_redirects_to_stripe(self, mock_stripe, client, seed_data, app):
-        """POST /checkout with valid price_id -> redirect to Stripe."""
+        """POST /checkout -> redirect to Stripe (single plan, no price_id needed)."""
         self._create_client_and_login(app, client, seed_data)
 
         # Mock Stripe Customer.create and checkout.Session.create
@@ -85,35 +85,11 @@ class TestBilling:
 
         resp = client.post(
             "/test-pizza/billing/checkout",
-            data={"price_id": "price_basic_test"},
-            follow_redirects=False,
-        )
-        assert resp.status_code == 302
-        assert "checkout.stripe.com" in resp.headers["Location"]
-
-    def test_checkout_invalid_price_id(self, client, seed_data, app):
-        """POST /checkout with invalid price_id -> redirect to dashboard with error."""
-        self._create_client_and_login(app, client, seed_data)
-
-        resp = client.post(
-            "/test-pizza/billing/checkout",
-            data={"price_id": "price_invalid_xxx"},
-            follow_redirects=False,
-        )
-        assert resp.status_code == 302
-        assert "/test-pizza/dashboard" in resp.headers["Location"]
-
-    def test_checkout_missing_price_id(self, client, seed_data, app):
-        """POST /checkout with no price_id -> redirect to dashboard with error."""
-        self._create_client_and_login(app, client, seed_data)
-
-        resp = client.post(
-            "/test-pizza/billing/checkout",
             data={},
             follow_redirects=False,
         )
         assert resp.status_code == 302
-        assert "/test-pizza/dashboard" in resp.headers["Location"]
+        assert "checkout.stripe.com" in resp.headers["Location"]
 
     @patch("app.services.stripe_service.stripe")
     def test_checkout_uses_existing_customer(self, mock_stripe, client, seed_data, app):
@@ -127,7 +103,7 @@ class TestBilling:
 
         resp = client.post(
             "/test-pizza/billing/checkout",
-            data={"price_id": "price_basic_test"},
+            data={},
             follow_redirects=False,
         )
         assert resp.status_code == 302
@@ -208,7 +184,7 @@ class TestBilling:
         """POST /checkout without login -> redirect to login."""
         resp = client.post(
             "/test-pizza/billing/checkout",
-            data={"price_id": "price_basic_test"},
+            data={},
             follow_redirects=False,
         )
         assert resp.status_code == 302

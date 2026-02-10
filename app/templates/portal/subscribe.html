@@ -3,10 +3,6 @@
 {% block title %}Activate Your Website — {{ g.site.display_name or g.workspace.name }}{% endblock %}
 
 {% block content %}
-{# Determine recommended plan from workspace settings #}
-{% set settings = g.workspace.settings if g.workspace else None %}
-{% set recommended = settings.plan_features.get('recommended_plan', '') if settings and settings.plan_features else '' %}
-
 <div class="cta-page" style="max-width: 100%; padding-bottom: 2rem;">
     <svg style="width: 48px; height: 48px; margin: 0 auto 1rem; color: var(--green-500, #22c55e);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -14,7 +10,7 @@
     <h1>Welcome to Belvieu Digital!</h1>
     <p style="max-width: 480px; margin: 0 auto 1rem;">
         Your custom website for <strong>{{ g.site.display_name or g.workspace.name }}</strong> is ready.
-        Just one more step — activate your plan to go live.
+        Just one more step — activate your subscription to go live.
     </p>
     {% if g.site.published_url %}
     <p style="margin-bottom: 2rem;">
@@ -25,15 +21,13 @@
     {% endif %}
 </div>
 
-<div class="pricing-grid">
-    {# ── Basic Plan ── #}
-    <div class="pricing-card {{ 'pricing-card-featured' if recommended == 'basic' }}">
-        {% if recommended == 'basic' %}
-        <div class="pricing-badge">Recommended</div>
-        {% endif %}
-        <div class="pricing-plan-name">Basic</div>
-        <div class="pricing-price">$59<span>/mo</span></div>
-        <div class="pricing-description">Everything you need to get online</div>
+<div class="pricing-grid" style="max-width: 480px; margin: 0 auto;">
+    <div class="pricing-card pricing-card-featured">
+        <div class="pricing-plan-name">Website as a Service</div>
+        <div class="pricing-price">$250</div>
+        <div class="pricing-description" style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem;">One-time setup fee</div>
+        <div class="pricing-description" style="font-size: 1.05rem; font-weight: 700; color: var(--color-text-primary);">Then $59/month</div>
+        <div class="pricing-description" style="font-size: 0.85rem; margin-top: 0.25rem;">First month of hosting included free with setup</div>
 
         <ul class="pricing-features">
             <li>
@@ -54,64 +48,29 @@
             </li>
             <li>
                 <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                Up to 4 content edits/month
+                Content edits included
             </li>
             <li>
                 <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                 Custom domain setup
             </li>
-        </ul>
-
-        <form method="POST" action="{{ url_for('billing.checkout', site_slug=g.site.site_slug) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="price_id" value="{{ config.STRIPE_BASIC_PRICE_ID }}">
-            <button type="submit" class="btn {{ 'btn-primary' if recommended == 'basic' else 'btn-secondary' }} btn-lg btn-full">
-                {{ 'Activate Basic Plan' if recommended == 'basic' else 'Get started' }}
-            </button>
-        </form>
-    </div>
-
-    {# ── Pro Plan ── #}
-    <div class="pricing-card {{ 'pricing-card-featured' if recommended != 'basic' }}">
-        <div class="pricing-badge">{{ 'Recommended' if recommended == 'pro' else 'Most Popular' }}</div>
-        <div class="pricing-plan-name">Pro</div>
-        <div class="pricing-price">$99<span>/mo</span></div>
-        <div class="pricing-description">For businesses that want more</div>
-
-        <ul class="pricing-features">
-            <li>
-                <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                Everything in Basic
-            </li>
-            <li>
-                <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                15 priority edits per month
-            </li>
-            <li>
-                <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                Priority support
-            </li>
             <li>
                 <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                 SEO fundamentals
             </li>
-            <li>
-                <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                Analytics dashboard
-            </li>
         </ul>
 
         <form method="POST" action="{{ url_for('billing.checkout', site_slug=g.site.site_slug) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="price_id" value="{{ config.STRIPE_PRO_PRICE_ID }}">
-            <button type="submit" class="btn {{ 'btn-primary' if recommended != 'basic' else 'btn-secondary' }} btn-lg btn-full">
-                {{ 'Activate Pro Plan' if recommended == 'pro' else 'Get started' }}
+            <button type="submit" class="btn btn-primary btn-lg btn-full">
+                Activate My Website
             </button>
         </form>
     </div>
 </div>
 
 <p style="text-align: center; margin-top: 1.5rem; font-size: 0.85rem; color: var(--color-text-muted);">
-    No contracts — cancel anytime. Your subscription activates your website and includes ongoing management.
+    No contracts — cancel anytime. The $250 one-time setup fee covers your custom site build.<br>
+    First month of hosting ($59) is included free. Then just $59/month ongoing.
 </p>
 {% endblock %}

@@ -241,7 +241,7 @@ def register_cli(app):
 
         db.session.commit()
 
-        base_url = app.config.get("APP_BASE_URL", "http://localhost:5000")
+        base_url = app.config["APP_BASE_URL"]
 
         click.echo("")
         click.echo("=" * 60)
@@ -253,4 +253,40 @@ def register_cli(app):
         click.echo(f"  Site:      {site.site_slug} (id: {site.id})")
         click.echo(f"  Invite:    {base_url}/auth/register?token={token}")
         click.echo(f"  Expires:   {invite.expires_at.isoformat()}")
+        click.echo("=" * 60)
+
+    @app.cli.command("create-setup-price")
+    def create_setup_price():
+        """Create the one-time $250 Website Setup Fee price in Stripe.
+
+        Run once, then copy the printed price ID into the
+        STRIPE_SETUP_PRICE_ID environment variable.
+        """
+        import stripe as _stripe
+
+        _stripe.api_key = app.config["STRIPE_SECRET_KEY"]
+
+        price = _stripe.Price.create(
+            unit_amount=25000,  # $250.00
+            currency="usd",
+            product_data={
+                "name": "Website Setup Fee",
+                "statement_descriptor": "BD SETUP FEE",
+            },
+            metadata={
+                "type": "setup_fee",
+                "description": "One-time website build and setup fee. First month of hosting ($59) included free.",
+            },
+        )
+
+        click.echo("")
+        click.echo("=" * 60)
+        click.echo("Stripe setup price created!")
+        click.echo("=" * 60)
+        click.echo(f"  Price ID:  {price.id}")
+        click.echo(f"  Amount:    ${price.unit_amount / 100:.2f} {price.currency.upper()}")
+        click.echo(f"  Type:      one_time")
+        click.echo("")
+        click.echo("Add this to your environment variables:")
+        click.echo(f"  STRIPE_SETUP_PRICE_ID={price.id}")
         click.echo("=" * 60)

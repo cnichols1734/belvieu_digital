@@ -19,7 +19,7 @@
         <div class="stat-label">Monthly Revenue</div>
         <div class="stat-value">${{ mrr }}</div>
         <div class="stat-detail">
-            {{ basic_count }} Basic &middot; {{ pro_count }} Pro
+            {{ active_count }} active subscriber{{ 's' if active_count != 1 else '' }}
         </div>
     </div>
     <div class="stat-card">
@@ -91,26 +91,13 @@
             </a>
         </div>
 
-        {# MRR Breakdown #}
-        {% if basic_count > 0 or pro_count > 0 %}
+        {# MRR #}
+        {% if active_count > 0 %}
         <hr class="divider">
-        <div class="card-header" style="padding-top: 0;">Revenue Breakdown</div>
         <div style="font-size: 0.85rem;">
-            {% if basic_count > 0 %}
             <div class="admin-detail-row">
-                <span class="text-muted">{{ basic_count }} Basic</span>
-                <span class="font-medium">${{ basic_count * 59 }}/mo</span>
-            </div>
-            {% endif %}
-            {% if pro_count > 0 %}
-            <div class="admin-detail-row">
-                <span class="text-muted">{{ pro_count }} Pro</span>
-                <span class="font-medium">${{ pro_count * 99 }}/mo</span>
-            </div>
-            {% endif %}
-            <div class="admin-detail-row" style="border-top: 1px solid var(--color-border-light, #e5e5e5); padding-top: 0.5rem; margin-top: 0.25rem;">
-                <span class="font-medium">Total MRR</span>
-                <span class="font-semibold">${{ mrr }}/mo</span>
+                <span class="text-muted">{{ active_count }} active subscriber{{ 's' if active_count != 1 else '' }} @ $59/mo</span>
+                <span class="font-semibold">${{ mrr }}/mo MRR</span>
             </div>
         </div>
         {% endif %}

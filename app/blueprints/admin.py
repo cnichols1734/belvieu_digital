@@ -74,19 +74,10 @@ def dashboard():
         else 0
     )
 
-    # --- Revenue metrics ---
+    # --- Revenue metrics (single tier: $59/mo) ---
     active_subs = BillingSubscription.query.filter_by(status="active").all()
     active_count = len(active_subs)
-    mrr = 0
-    basic_count = 0
-    pro_count = 0
-    for sub in active_subs:
-        if sub.plan == "basic":
-            mrr += 59
-            basic_count += 1
-        elif sub.plan == "pro":
-            mrr += 99
-            pro_count += 1
+    mrr = active_count * 59
 
     # --- At-risk clients (past_due subscriptions) ---
     at_risk_subs = BillingSubscription.query.filter_by(status="past_due").all()
@@ -124,8 +115,6 @@ def dashboard():
         conversion_rate=conversion_rate,
         active_count=active_count,
         mrr=mrr,
-        basic_count=basic_count,
-        pro_count=pro_count,
         at_risk_data=at_risk_data,
         open_tickets_count=open_tickets_count,
         pending_invites=pending_invites,
@@ -328,7 +317,13 @@ def prospect_add_activity(prospect_id):
 @admin_bp.route("/prospects/<prospect_id>/send-outreach", methods=["POST"])
 @admin_required
 def prospect_send_outreach(prospect_id):
-    """Send an outreach email to a prospect and log the activity."""
+    """Send an outreach email with demo link AND portal invite link.
+
+    If a workspace/site/invite don't exist yet, creates them first so the
+    prospect can self-serve: view the demo, register, and pay via Stripe.
+    """
+    import re
+
     prospect = db.session.get(Prospect, prospect_id)
     if prospect is None:
         flash("Prospect not found.", "error")
@@ -336,11 +331,101 @@ def prospect_send_outreach(prospect_id):
 
     recipient_email = request.form.get("recipient_email", "").strip()
     custom_message = request.form.get("custom_message", "").strip() or None
+    site_slug = request.form.get("site_slug", "").strip().lower()
+    display_name = request.form.get("display_name", "").strip() or prospect.business_name
 
     if not recipient_email:
         flash("Recipient email is required.", "error")
         return redirect(url_for("admin.prospect_detail", prospect_id=prospect_id))
 
+    if not site_slug:
+        # Auto-generate from business name
+        site_slug = re.sub(r"[^a-z0-9]+", "-", prospect.business_name.lower()).strip("-")
+
+    if not site_slug:
+        flash("Site slug is required.", "error")
+        return redirect(url_for("admin.prospect_detail", prospect_id=prospect_id))
+
+    # ── Create workspace/site/invite if not already done ──
+    invite_link = None
+    if not prospect.workspace_id:
+        # Check slug uniqueness
+        existing_site = Site.query.filter_by(site_slug=site_slug).first()
+        if existing_site:
+            flash(f"Site slug '{site_slug}' is already taken. Please choose another.", "error")
+            return redirect(url_for("admin.prospect_detail", prospect_id=prospect_id))
+
+        # 1. Create workspace
+        workspace = Workspace(
+            name=prospect.business_name,
+            prospect_id=prospect.id,
+        )
+        db.session.add(workspace)
+        db.session.flush()
+
+        # 2. Create workspace settings
+        settings = WorkspaceSettings(workspace_id=workspace.id)
+        db.session.add(settings)
+
+        # 3. Create site
+        site = Site(
+            workspace_id=workspace.id,
+            site_slug=site_slug,
+            display_name=display_name,
+            published_url=prospect.demo_url,
+            status="demo",
+        )
+        db.session.add(site)
+        db.session.flush()
+
+        # 4. Create invite
+        invite = invite_service.generate_invite(
+            workspace_id=workspace.id,
+            site_id=site.id,
+            email=recipient_email,
+        )
+
+        # 5. Link prospect to workspace
+        prospect.workspace_id = workspace.id
+
+        # Audit workspace creation
+        db.session.add(AuditEvent(
+            actor_user_id=current_user.id,
+            action="prospect.workspace_created",
+            metadata_={
+                "prospect_id": prospect_id,
+                "workspace_id": workspace.id,
+                "site_id": site.id,
+                "site_slug": site_slug,
+                "reason": "auto — created during outreach email",
+            },
+        ))
+    else:
+        # Workspace already exists — find existing invite or create new one
+        workspace = db.session.get(Workspace, prospect.workspace_id)
+        site = workspace.sites.first() if workspace else None
+
+        # Look for a valid existing invite
+        existing_invite = WorkspaceInvite.query.filter_by(
+            workspace_id=workspace.id
+        ).filter(
+            WorkspaceInvite.used_at.is_(None),
+        ).first()
+
+        if existing_invite and existing_invite.is_valid:
+            invite = existing_invite
+        else:
+            invite = invite_service.generate_invite(
+                workspace_id=workspace.id,
+                site_id=site.id if site else None,
+                email=recipient_email,
+            )
+
+    # Build the invite link
+    base_url = current_app.config["APP_BASE_URL"]
+    invite_link = f"{base_url}/auth/register?token={invite.token}"
+
+    # ── Send the combined outreach email ──
     send_email(
         to=recipient_email,
         subject=f"We built a website for {prospect.business_name}",
@@ -350,6 +435,7 @@ def prospect_send_outreach(prospect_id):
             "contact_name": prospect.contact_name,
             "demo_url": prospect.demo_url,
             "custom_message": custom_message,
+            "invite_link": invite_link,
         },
         reply_to=current_app.config.get("MAIL_FROM_ADDRESS"),
     )
@@ -358,7 +444,7 @@ def prospect_send_outreach(prospect_id):
     activity = ProspectActivity(
         prospect_id=prospect_id,
         activity_type="email",
-        note=f"Outreach email sent to {recipient_email}" + (f": {custom_message[:100]}" if custom_message else ""),
+        note=f"Outreach email sent to {recipient_email} (with invite link)" + (f": {custom_message[:100]}" if custom_message else ""),
         actor_user_id=current_user.id,
     )
     db.session.add(activity)
@@ -386,13 +472,14 @@ def prospect_send_outreach(prospect_id):
             "prospect_id": prospect_id,
             "recipient_email": recipient_email,
             "business_name": prospect.business_name,
+            "invite_link_included": True,
         },
     )
     db.session.add(audit)
     db.session.commit()
 
     status_msg = " Status moved to Pitched." if prospect.status == "pitched" else ""
-    flash(f"Outreach email sent to {recipient_email}.{status_msg}", "success")
+    flash(f"Outreach email sent to {recipient_email} with demo link and portal invite.{status_msg}", "success")
     return redirect(url_for("admin.prospect_detail", prospect_id=prospect_id))
 
 
@@ -489,7 +576,7 @@ def prospect_convert(prospect_id):
         db.session.commit()
 
         # Build the invite link
-        base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
+        base_url = current_app.config["APP_BASE_URL"]
         invite_link = f"{base_url}/auth/register?token={invite.token}"
 
         flash("Prospect converted to client successfully!", "success")
@@ -800,7 +887,7 @@ def workspace_invite(workspace_id):
     db.session.add(audit)
     db.session.commit()
 
-    base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5000")
+    base_url = current_app.config["APP_BASE_URL"]
     invite_link = f"{base_url}/auth/register?token={invite.token}"
 
     flash(f"Invite link generated!", "success")
@@ -980,7 +1067,7 @@ def ticket_reply(ticket_id):
                 workspace = db.session.get(Workspace, ticket.workspace_id)
                 site = workspace.sites.first() if workspace else None
                 site_slug = site.site_slug if site else ""
-                base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5001")
+                base_url = current_app.config["APP_BASE_URL"]
                 send_email(
                     to=author.email,
                     subject=f"Update on your request: {ticket.subject}",

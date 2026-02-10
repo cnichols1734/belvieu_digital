@@ -164,7 +164,7 @@ def ticket_new(site_slug):
 
             # Email notification to admin
             admin_email = current_app.config.get("MAIL_CONTACT_TO", "info@belvieudigital.com")
-            base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5001")
+            base_url = current_app.config["APP_BASE_URL"]
             send_email(
                 to=admin_email,
                 subject=f"New ticket from {g.workspace.name}: {subject}",
@@ -257,7 +257,7 @@ def ticket_reply(site_slug, ticket_id):
 
         # Email notification to admin
         admin_email = current_app.config.get("MAIL_CONTACT_TO", "info@belvieudigital.com")
-        base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5001")
+        base_url = current_app.config["APP_BASE_URL"]
         send_email(
             to=admin_email,
             subject=f"Reply from {g.workspace.name}: {ticket.subject}",

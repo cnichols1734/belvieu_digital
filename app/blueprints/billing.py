@@ -41,28 +41,14 @@ billing_bp = Blueprint("billing", __name__)
 def checkout(site_slug):
     """Create a Stripe Checkout Session and redirect to Stripe.
 
-    Accepts price_id from form body. Accessible even when access_level
-    is 'subscribe' or 'blocked' (so clients can subscribe/resubscribe).
+    Single-plan checkout: $250 one-time setup fee + $59/mo subscription
+    with a 30-day free trial on the recurring charge.
+    Accessible even when access_level is 'subscribe' or 'blocked'.
     """
-    price_id = request.form.get("price_id")
-    if not price_id:
-        flash("Invalid plan selected.", "error")
-        return redirect(url_for("portal.dashboard", site_slug=site_slug))
-
-    # Validate price_id is one of our configured plans
-    valid_prices = [
-        current_app.config.get("STRIPE_BASIC_PRICE_ID"),
-        current_app.config.get("STRIPE_PRO_PRICE_ID"),
-    ]
-    if price_id not in valid_prices:
-        flash("Invalid plan selected.", "error")
-        return redirect(url_for("portal.dashboard", site_slug=site_slug))
-
     try:
         checkout_url = create_checkout_session(
             workspace_id=g.workspace_id,
             site_id=g.site.id,
-            price_id=price_id,
             site_slug=site_slug,
         )
         return redirect(checkout_url)
