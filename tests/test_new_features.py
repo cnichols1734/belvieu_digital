@@ -318,7 +318,7 @@ class TestInviteEmail:
             f"/admin/workspaces/{seed_data['workspace_id']}/send-invite-email",
             data={
                 "recipient_email": "joe@testpizza.com",
-                "invite_link": "http://localhost:5001/auth/register?token=abc123",
+                "invite_link": "http://localhost:5000/auth/register?token=abc123",
                 "custom_message": "Welcome to your new site!",
             },
             follow_redirects=True,
@@ -335,7 +335,7 @@ class TestInviteEmail:
             f"/admin/workspaces/{seed_data['workspace_id']}/send-invite-email",
             data={
                 "recipient_email": "joe@testpizza.com",
-                "invite_link": "http://localhost:5001/auth/register?token=abc123",
+                "invite_link": "http://localhost:5000/auth/register?token=abc123",
             },
         )
 
@@ -350,7 +350,7 @@ class TestInviteEmail:
             f"/admin/workspaces/{seed_data['workspace_id']}/send-invite-email",
             data={
                 "recipient_email": "",
-                "invite_link": "http://localhost:5001/auth/register?token=abc123",
+                "invite_link": "http://localhost:5000/auth/register?token=abc123",
             },
             follow_redirects=True,
         )
@@ -665,8 +665,8 @@ class TestAdminDashboardEnhancements:
 
         resp = client.get("/admin/")
         assert resp.status_code == 200
-        assert b"Revenue Breakdown" in resp.data
-        assert b"Basic" in resp.data
+        assert b"active subscriber" in resp.data
+        assert b"$59/mo MRR" in resp.data
 
     def test_dashboard_shows_at_risk(self, client, seed_data, app):
         _login_admin(client)

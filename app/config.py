@@ -17,7 +17,7 @@ class Config:
     STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")
     STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET")
     STRIPE_BASIC_PRICE_ID = os.environ.get("STRIPE_BASIC_PRICE_ID")
-    STRIPE_PRO_PRICE_ID = os.environ.get("STRIPE_PRO_PRICE_ID")
+    STRIPE_SETUP_PRICE_ID = os.environ.get("STRIPE_SETUP_PRICE_ID")
     STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY")
     APP_BASE_URL = os.environ.get("APP_BASE_URL", "http://localhost:5000")
 
@@ -59,7 +59,8 @@ class Config:
             "STRIPE_SECRET_KEY",
             "STRIPE_WEBHOOK_SECRET",
             "STRIPE_BASIC_PRICE_ID",
-            "STRIPE_PRO_PRICE_ID",
+            "STRIPE_SETUP_PRICE_ID",
+            "APP_BASE_URL",
         ]
         missing = [v for v in required if not os.environ.get(v)]
         if missing:
@@ -86,7 +87,7 @@ class TestConfig(Config):
     STRIPE_SECRET_KEY = "sk_test_fake"
     STRIPE_WEBHOOK_SECRET = "whsec_test_fake"
     STRIPE_BASIC_PRICE_ID = "price_basic_test"
-    STRIPE_PRO_PRICE_ID = "price_pro_test"
+    STRIPE_SETUP_PRICE_ID = "price_setup_test"
     STRIPE_PUBLISHABLE_KEY = "pk_test_fake"
     APP_BASE_URL = "http://localhost:5000"
     WTF_CSRF_ENABLED = False  # disable CSRF for test forms

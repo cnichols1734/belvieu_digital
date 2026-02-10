@@ -8,7 +8,7 @@
 
 ## Project Overview
 
-WaaS (Website-as-a-Service) portal for Chris's business: find small businesses on Google Maps / Facebook with no site or a bad one, build them a custom one-pager, pitch them with a live .dev preview link, convert them to paying clients at $59/mo (Basic) or $99/mo (Pro).
+WaaS (Website-as-a-Service) portal for Chris's business: find small businesses on Google Maps / Facebook with no site or a bad one, build them a custom one-pager, pitch them with a live .dev preview link, convert them to paying clients with a $250 one-time setup fee + $59/mo (first month free with setup).
 
 **Stack:** Flask, Supabase Postgres, Stripe, Railway. Server-rendered HTML (Jinja), vanilla JS + CSS. No React, no SPA.
 
@@ -21,8 +21,8 @@ WaaS (Website-as-a-Service) portal for Chris's business: find small businesses o
 - **Stripe account:** "Belvieu Digital sandbox" (`acct_1SyQCA3E1rMCjOFG`), test mode
 - **Stripe CLI** installed via Homebrew (`stripe` v1.35.0), authenticated. Session expires after 90 days.
 - **Stripe products created in test mode:**
-  - WaaS Basic — $59/mo — Product: `prod_TwKBB8dPngYZ1f`, Price: `price_1SyRX13E1rMCjOFGiCt4XvzM`
-  - WaaS Pro — $99/mo — Product: `prod_TwKBSGlRBqZHal`, Price: `price_1SyRX13E1rMCjOFGnvrzMk5T`
+  - WaaS Monthly — $59/mo — Product: `prod_TwKBB8dPngYZ1f`, Price: `price_1SyRX13E1rMCjOFGiCt4XvzM`
+  - Website Setup Fee — $250 one-time — Run `flask create-setup-price` to create, set STRIPE_SETUP_PRICE_ID env var
 - **Webhook listener:** run `stripe listen --forward-to localhost:5000/stripe/webhooks` each dev session. The `whsec_` signing secret in `.env` matches this CLI listener.
 - **Local dev DB:** SQLite (`sqlite:///dev.db`). Switch to Supabase Postgres for production.
 - **Supabase project:** `lynrxezjbafyrcgblhdl` (new, clean). Connection strings not yet configured — need DB password + region from Chris when ready for prod.

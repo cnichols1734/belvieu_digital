@@ -15,6 +15,7 @@ import stripe
 from flask import current_app
 
 from app.extensions import db
+from app.models.audit import AuditEvent
 from app.models.billing import BillingCustomer, BillingSubscription
 from app.models.stripe_event import StripeEvent
 from app.services.billing_service import (
@@ -56,17 +57,22 @@ def _extract_period_end(sub_data):
 # Checkout & Portal Sessions
 # ──────────────────────────────────────────────
 
-def create_checkout_session(workspace_id, site_id, price_id, site_slug):
-    """Create a Stripe Checkout Session for a subscription.
+def create_checkout_session(workspace_id, site_id, site_slug):
+    """Create a Stripe Checkout Session for subscription + one-time setup fee.
 
     Gets or creates a Stripe Customer for this workspace, then creates
-    a checkout session with workspace/site metadata.
+    a checkout session with:
+      - One-time $250 setup fee (STRIPE_SETUP_PRICE_ID)
+      - Recurring $59/mo subscription (STRIPE_BASIC_PRICE_ID)
+      - 30-day trial so the first $59 charge doesn't hit until month 2
 
     Returns the Stripe checkout session URL.
     Raises stripe.error.StripeError on API failures.
     """
     stripe.api_key = current_app.config["STRIPE_SECRET_KEY"]
     app_base_url = current_app.config["APP_BASE_URL"]
+    setup_price_id = current_app.config["STRIPE_SETUP_PRICE_ID"]
+    basic_price_id = current_app.config["STRIPE_BASIC_PRICE_ID"]
 
     # Get or create Stripe customer
     billing_customer = BillingCustomer.query.filter_by(
@@ -86,11 +92,17 @@ def create_checkout_session(workspace_id, site_id, price_id, site_slug):
         stripe_customer_id = customer.id
         get_or_create_billing_customer(workspace_id, stripe_customer_id)
 
-    # Create checkout session
+    # Create checkout session with setup fee + recurring subscription
     session = stripe.checkout.Session.create(
         mode="subscription",
         customer=stripe_customer_id,
-        line_items=[{"price": price_id, "quantity": 1}],
+        line_items=[
+            {"price": setup_price_id, "quantity": 1},   # $250 one-time setup fee
+            {"price": basic_price_id, "quantity": 1},    # $59/mo recurring
+        ],
+        subscription_data={
+            "trial_period_days": 30,  # First month of hosting free
+        },
         success_url=(
             f"{app_base_url}/{site_slug}/billing/success"
             f"?session_id={{CHECKOUT_SESSION_ID}}"
@@ -248,6 +260,40 @@ def _handle_checkout_completed(event):
         "plan": get_plan_from_price_id(stripe_price_id, current_app.config),
         "site_id": site_id,
     })
+
+    # ── Auto-convert prospect to client on first payment ──
+    _auto_convert_prospect(workspace_id)
+
+
+def _auto_convert_prospect(workspace_id):
+    """If a prospect is linked to this workspace and not yet converted,
+    mark it as converted now that payment has been received."""
+    from app.models.workspace import Workspace
+    from app.models.prospect import Prospect
+
+    workspace = db.session.get(Workspace, workspace_id)
+    if not workspace or not workspace.prospect_id:
+        return
+
+    prospect = db.session.get(Prospect, workspace.prospect_id)
+    if not prospect or prospect.status == "converted":
+        return
+
+    old_status = prospect.status
+    prospect.status = "converted"
+    prospect.workspace_id = workspace.id
+
+    db.session.add(AuditEvent(
+        action="prospect.auto_converted",
+        metadata_={
+            "prospect_id": prospect.id,
+            "workspace_id": workspace_id,
+            "old_status": old_status,
+            "reason": "stripe payment completed",
+        },
+    ))
+    db.session.commit()
+    logger.info(f"Auto-converted prospect {prospect.id} ({prospect.business_name}) to client")
 
 
 def _handle_subscription_updated(event):

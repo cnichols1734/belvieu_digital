@@ -271,7 +271,7 @@
 {% if prospect.status in ('site_built', 'pitched') and prospect.contact_email %}
 <div class="card" style="max-width: 100%; margin-top: 1.5rem;">
     <div class="card-header">Send Outreach Email</div>
-    <p class="text-sm text-muted mb-1">Send a branded email with the demo site link to this prospect.</p>
+    <p class="text-sm text-muted mb-1">Send a branded email with the demo site link <strong>and portal invite</strong> to this prospect. This will auto-create their workspace if one doesn't exist yet.</p>
 
     <form method="POST" action="{{ url_for('admin.prospect_send_outreach', prospect_id=prospect.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -282,6 +282,24 @@
                    value="{{ prospect.contact_email or '' }}" required>
         </div>
 
+        {% if not prospect.workspace_id %}
+        <div class="content-grid">
+            <div class="form-group">
+                <label for="site_slug" class="form-label">Site Slug <span class="text-muted">(URL identifier)</span></label>
+                <input type="text" id="site_slug" name="site_slug" class="form-control"
+                       value="{{ prospect.business_name | lower | replace(' ', '-') }}"
+                       placeholder="e.g. joes-plumbing" required pattern="[a-z0-9\-]+">
+                <span class="form-hint">Used in portal URL: /&lt;slug&gt;/dashboard</span>
+            </div>
+            <div class="form-group">
+                <label for="display_name" class="form-label">Display Name <span class="text-muted">(optional)</span></label>
+                <input type="text" id="display_name" name="display_name" class="form-control"
+                       value="{{ prospect.business_name }}"
+                       placeholder="{{ prospect.business_name }}">
+            </div>
+        </div>
+        {% endif %}
+
         <div class="form-group">
             <label for="custom_message" class="form-label">Custom Message <span class="text-muted">(optional — leave blank for the default pitch)</span></label>
             <textarea id="custom_message" name="custom_message" class="form-control" rows="4"
@@ -290,7 +308,7 @@
 
         <button type="submit" class="btn btn-primary">
             <svg style="width: 16px; height: 16px; margin-right: 4px;" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
-            Send Outreach Email
+            Send Outreach Email with Portal Invite
         </button>
     </form>
 </div>
