@@ -526,6 +526,9 @@ img { max-width: 100%; }
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
 }
+.content-grid > * {
+    min-width: 0;
+}
 
 .content-grid-wide {
     grid-column: 1 / -1;
@@ -1758,9 +1761,25 @@ select.form-control {
     padding: 0.45rem 0;
     font-size: 13px;
     border-bottom: 1px solid var(--color-border-light);
+    overflow: hidden;
+    min-width: 0;
 }
 .admin-detail-row:last-child {
     border-bottom: none;
+}
+.admin-detail-row > :last-child:not(.admin-detail-label) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+.admin-detail-row a {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    max-width: 100%;
+    vertical-align: bottom;
 }
 
 .admin-detail-label {
