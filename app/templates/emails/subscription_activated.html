@@ -1,0 +1,72 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Subscription Activated — {{ business_name }}{% endblock %}
+
+{% block content %}
+<h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #1a1a1a; line-height: 1.3;">
+  You're all set!
+</h1>
+<p style="margin: 0 0 24px; font-size: 15px; line-height: 1.7; color: #737373;">
+  Hi{{ ' ' + customer_name.split(' ')[0] if customer_name else '' }}, your subscription for <strong>{{ business_name }}</strong> is now active. Welcome aboard!
+</p>
+
+<!-- Summary box -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #fafafa; border-radius: 6px; border: 1px solid #f0f0f0; margin-bottom: 24px;">
+  <tr>
+    <td style="padding: 20px 24px;">
+      <p style="margin: 0 0 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #999999;">
+        Subscription summary
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="padding: 8px 0;">
+            <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555;">
+              <strong style="color: #1a1a1a;">Plan:</strong> Basic — $59/month
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0;">
+            <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555;">
+              <strong style="color: #1a1a1a;">Includes:</strong> Hosting, SSL, 4 content edits/month, support portal
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0;">
+            <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555;">
+              <strong style="color: #1a1a1a;">Billing:</strong> You can manage your subscription anytime from your dashboard
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<!-- CTA Button -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px;">
+  <tr>
+    <td align="center">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="background-color: #1a1a1a; border-radius: 6px;">
+            <a href="{{ dashboard_url }}" target="_blank" style="display: inline-block; padding: 14px 32px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 6px;">
+              Go to Dashboard &rarr;
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<p style="margin: 0; font-size: 13px; line-height: 1.6; color: #999999;">
+  If you have any questions, just reply to this email or open a support ticket from your dashboard.
+</p>
+{% endblock %}
+
+{% block footer %}
+&copy; 2026 Belvieu Digital. All rights reserved.<br>
+You're receiving this because you activated a subscription with Belvieu Digital.
+{% endblock %}

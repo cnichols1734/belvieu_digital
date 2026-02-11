@@ -205,7 +205,7 @@
                     {% endif %}
                     {% if billing_customer %}
                     <hr class="divider">
-                    <a href="https://dashboard.stripe.com/test/customers/{{ billing_customer.stripe_customer_id }}" target="_blank" class="btn btn-sm btn-secondary btn-full">
+                    <a href="https://dashboard.stripe.com/{% if stripe_mode == 'test' %}test/{% endif %}customers/{{ billing_customer.stripe_customer_id }}" target="_blank" class="btn btn-sm btn-secondary btn-full">
                         Open in Stripe ↗
                     </a>
                     {% endif %}

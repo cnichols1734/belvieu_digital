@@ -50,6 +50,8 @@ def checkout(site_slug):
             workspace_id=g.workspace_id,
             site_id=g.site.id,
             site_slug=site_slug,
+            customer_email=current_user.email,
+            customer_name=current_user.full_name,
         )
         return redirect(checkout_url)
     except Exception as e:
@@ -144,7 +146,23 @@ def checkout_status(site_slug):
                     )
 
                     derive_site_status(g.workspace_id, stripe_sub.get("status", "active"))
+
+                    # Audit log (matches webhook path)
+                    from app.services.billing_service import log_billing_audit
+                    log_billing_audit(g.workspace_id, "subscription.created", {
+                        "stripe_subscription_id": stripe_sub["id"],
+                        "plan": get_plan_from_price_id(stripe_price_id, current_app.config),
+                        "source": "checkout_status_sync",
+                    })
+
+                    # Auto-convert prospect to client on first payment
+                    from app.services.stripe_service import _auto_convert_prospect, _send_activation_email
+                    _auto_convert_prospect(g.workspace_id)
+
                     db.session.commit()
+
+                    # Send activation email (after commit so data is persisted)
+                    _send_activation_email(g.workspace_id, site_slug)
 
                     active = stripe_sub.get("status") in ("active", "trialing")
                     logger.info(f"Synced subscription from Stripe session {session_id} for workspace {g.workspace_id}")
