@@ -33,6 +33,24 @@ class Site(db.Model):
     status = db.Column(
         db.String(50), default="demo", nullable=False
     )  # demo | active | paused | cancelled
+
+    # --- Domain selection (client intent, set before subscription) ---
+    domain_choice = db.Column(
+        db.String(30), nullable=True
+    )  # search_new | own_domain | keep_subdomain
+    requested_domain = db.Column(
+        db.String(255), nullable=True
+    )  # domain they want (e.g. "mariospizza.com")
+    requested_domain_price = db.Column(
+        db.Float, nullable=True
+    )  # annual price in USD from Cloudflare pricing
+    domain_self_purchase = db.Column(
+        db.Boolean, default=False
+    )  # True if domain is over budget; client buys it themselves
+    domain_choice_at = db.Column(
+        db.DateTime(timezone=True), nullable=True
+    )  # when the client made their selection
+
     created_at = db.Column(
         db.DateTime(timezone=True), server_default=db.func.now()
     )

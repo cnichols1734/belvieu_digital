@@ -21,8 +21,8 @@
     {% endif %}
 </div>
 
-<div class="pricing-grid" style="max-width: 560px; margin: 0 auto;">
-    <div class="pricing-card pricing-card-featured" style="padding: 3rem;">
+<div class="pricing-grid" style="max-width: 620px; margin: 0 auto;">
+    <div class="pricing-card pricing-card-featured" style="padding: 2.5rem 2.5rem 2rem;">
         <div class="pricing-price">$250</div>
         <div class="pricing-description" style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem;">to get started</div>
         <div class="pricing-description" style="font-size: 1.05rem; font-weight: 700; color: var(--color-text-primary);">Then just $59/month</div>
@@ -51,7 +51,7 @@
             </li>
             <li>
                 <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                Custom domain setup
+                Free custom domain (up to $25/yr)
             </li>
             <li>
                 <svg class="pricing-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
@@ -59,11 +59,124 @@
             </li>
         </ul>
 
-        <form method="POST" action="{{ url_for('billing.checkout', site_slug=g.site.site_slug) }}">
+        {# ── Domain Selection Section ── #}
+        <div class="domain-section">
+            <div class="domain-section-header">
+                <h3 class="domain-section-title">Choose Your Domain</h3>
+                <p class="domain-section-subtitle">Every website needs an address. Pick how you'd like to handle yours.</p>
+            </div>
+
+            {# ── Three Option Cards ── #}
+            <div class="domain-options" id="domainOptions">
+                {# Option 1: Find a New Domain #}
+                <button type="button" class="domain-option" data-choice="search_new" onclick="selectDomainOption('search_new')">
+                    <div class="domain-option-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                        </svg>
+                    </div>
+                    <div class="domain-option-text">
+                        <span class="domain-option-label">Find a New Domain</span>
+                        <span class="domain-option-hint">Search for your perfect .com, .net, and more</span>
+                    </div>
+                </button>
+
+                {# Option 2: Already Have One #}
+                <button type="button" class="domain-option" data-choice="own_domain" onclick="selectDomainOption('own_domain')">
+                    <div class="domain-option-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+                            <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+                        </svg>
+                    </div>
+                    <div class="domain-option-text">
+                        <span class="domain-option-label">I Already Have a Domain</span>
+                        <span class="domain-option-hint">We'll help you connect it to your new site</span>
+                    </div>
+                </button>
+
+                {# Option 3: Keep Current URL #}
+                <button type="button" class="domain-option" data-choice="keep_subdomain" onclick="selectDomainOption('keep_subdomain')">
+                    <div class="domain-option-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+                            <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
+                        </svg>
+                    </div>
+                    <div class="domain-option-text">
+                        <span class="domain-option-label">Keep My Current URL</span>
+                        <span class="domain-option-hint">Stay at your existing preview address</span>
+                    </div>
+                </button>
+            </div>
+
+            {# ── Expandable Panels (hidden by default) ── #}
+
+            {# Panel: Domain Search #}
+            <div class="domain-panel" id="panelSearchNew" style="display:none;">
+                <div class="domain-search-bar">
+                    <input type="text" id="domainSearchInput" class="form-control" placeholder="e.g. mybusiness.com" autocomplete="off" autocapitalize="none" spellcheck="false">
+                    <button type="button" class="btn btn-primary" id="domainSearchBtn" onclick="checkDomain()">
+                        Check Availability
+                    </button>
+                </div>
+                <div id="domainSearchResult" style="display:none;"></div>
+            </div>
+
+            {# Panel: Own Domain #}
+            <div class="domain-panel" id="panelOwnDomain" style="display:none;">
+                <div class="domain-search-bar">
+                    <input type="text" id="ownDomainInput" class="form-control" placeholder="e.g. mybusiness.com" autocomplete="off" autocapitalize="none" spellcheck="false">
+                    <button type="button" class="btn btn-primary" id="ownDomainBtn" onclick="confirmOwnDomain()">
+                        Confirm
+                    </button>
+                </div>
+                <p class="domain-panel-hint">Enter the domain you already own. We'll send you DNS setup instructions after activation.</p>
+            </div>
+
+            {# Panel: Keep Subdomain #}
+            <div class="domain-panel" id="panelKeepSubdomain" style="display:none;">
+                <div class="domain-result domain-result-info">
+                    <div class="domain-result-icon">
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+                    </div>
+                    <div class="domain-result-body">
+                        <div class="domain-result-title">Your site will stay at its current address</div>
+                        <div class="domain-result-text">
+                            {% if g.site.published_url %}
+                                <strong>{{ g.site.published_url }}</strong>
+                            {% else %}
+                                Your current preview URL
+                            {% endif %}
+                            <br>You can always add a custom domain later.
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-primary btn-full" style="margin-top: 0.75rem;" onclick="confirmKeepSubdomain()">
+                    Keep This URL
+                </button>
+            </div>
+
+            {# ── Confirmation Chip (shown after selection) ── #}
+            <div class="domain-confirmed" id="domainConfirmed" style="display:none;">
+                <div class="domain-confirmed-inner">
+                    <svg class="domain-confirmed-check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                    <div>
+                        <span class="domain-confirmed-label" id="confirmedLabel">Domain selected</span>
+                        <span class="domain-confirmed-detail" id="confirmedDetail"></span>
+                    </div>
+                </div>
+                <button type="button" class="domain-confirmed-change" onclick="resetDomainChoice()">Change</button>
+            </div>
+        </div>
+
+        {# ── Activate Button ── #}
+        <form method="POST" action="{{ url_for('billing.checkout', site_slug=g.site.site_slug) }}" id="checkoutForm">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-primary btn-lg btn-full">
+            <button type="submit" class="btn btn-primary btn-lg btn-full" id="activateBtn" disabled>
                 Activate My Website
             </button>
+            <p class="domain-activate-hint" id="activateHint">Choose a domain option above to continue</p>
         </form>
     </div>
 </div>
@@ -72,4 +185,340 @@
     No contracts — cancel anytime. The $250 covers your custom site build + first month of hosting.<br>
     Then just $59/month ongoing.
 </p>
+
+<script>
+(function() {
+    var siteSlug = {{ g.site.site_slug | tojson }};
+    var csrfToken = {{ csrf_token() | tojson }};
+    var currentChoice = null;
+    var domainSelected = false;
+
+    // --- Option Selection ---
+    window.selectDomainOption = function(choice) {
+        // Reset previous state
+        hideAllPanels();
+        domainSelected = false;
+        updateActivateButton();
+
+        // Highlight the selected option
+        var options = document.querySelectorAll('.domain-option');
+        options.forEach(function(el) {
+            el.classList.remove('domain-option-active');
+        });
+        var active = document.querySelector('[data-choice="' + choice + '"]');
+        if (active) active.classList.add('domain-option-active');
+
+        currentChoice = choice;
+
+        // Show the right panel
+        if (choice === 'search_new') {
+            show('panelSearchNew');
+            var input = document.getElementById('domainSearchInput');
+            if (input) input.focus();
+        } else if (choice === 'own_domain') {
+            show('panelOwnDomain');
+            var input = document.getElementById('ownDomainInput');
+            if (input) input.focus();
+        } else if (choice === 'keep_subdomain') {
+            show('panelKeepSubdomain');
+        }
+
+        hide('domainConfirmed');
+    };
+
+    // --- Domain Search ---
+    window.checkDomain = function() {
+        var input = document.getElementById('domainSearchInput');
+        var domain = (input.value || '').trim();
+        if (!domain) { input.focus(); return; }
+
+        // Add .com if no extension
+        if (domain.indexOf('.') === -1) domain = domain + '.com';
+
+        var btn = document.getElementById('domainSearchBtn');
+        var resultEl = document.getElementById('domainSearchResult');
+
+        btn.disabled = true;
+        btn.textContent = 'Checking...';
+        resultEl.style.display = 'none';
+
+        fetch('/' + siteSlug + '/domain/check', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ domain: domain })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            btn.disabled = false;
+            btn.textContent = 'Check Availability';
+
+            if (data.error) {
+                showSearchResult('error', data.error, null, null);
+                return;
+            }
+
+            if (!data.available) {
+                showSearchResult('taken', data.domain, null, null);
+                return;
+            }
+
+            // Available!
+            if (data.price !== null && data.within_budget) {
+                showSearchResult('available_included', data.domain, data.price, false);
+            } else if (data.price !== null && !data.within_budget) {
+                showSearchResult('available_over', data.domain, data.price, true);
+            } else {
+                // Unknown TLD pricing
+                showSearchResult('available_unknown', data.domain, null, true);
+            }
+        })
+        .catch(function() {
+            btn.disabled = false;
+            btn.textContent = 'Check Availability';
+            showSearchResult('error', 'Network error. Please try again.', null, null);
+        });
+    };
+
+    function showSearchResult(type, domainOrMsg, price, selfPurchase) {
+        var el = document.getElementById('domainSearchResult');
+        el.style.display = 'block';
+        var html = '';
+
+        if (type === 'available_included') {
+            html = '<div class="domain-result domain-result-success">' +
+                '<div class="domain-result-icon"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></div>' +
+                '<div class="domain-result-body">' +
+                    '<div class="domain-result-title">' + escapeHtml(domainOrMsg) + ' is available!</div>' +
+                    '<div class="domain-result-text">Included with your plan ($' + price.toFixed(2) + '/yr). We\'ll register it for you.</div>' +
+                '</div></div>' +
+                '<button type="button" class="btn btn-primary btn-full" style="margin-top:0.75rem;" onclick="selectSearchedDomain(\'' + escapeAttr(domainOrMsg) + '\',' + price + ',false)">Select This Domain</button>' +
+                '<div class="domain-result-footnote">Standard registration pricing. Premium domains may vary — final price confirmed at registration.</div>';
+        } else if (type === 'available_over') {
+            html = '<div class="domain-result domain-result-warning">' +
+                '<div class="domain-result-icon"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg></div>' +
+                '<div class="domain-result-body">' +
+                    '<div class="domain-result-title">' + escapeHtml(domainOrMsg) + ' is available</div>' +
+                    '<div class="domain-result-text">This domain costs $' + price.toFixed(2) + '/yr, which is above the $25/yr included with your plan. You\'re welcome to purchase it yourself and we\'ll help you get it connected — or try searching for another domain in the included range.</div>' +
+                '</div></div>' +
+                '<div class="domain-result-actions">' +
+                    '<button type="button" class="btn btn-primary" onclick="selectSearchedDomain(\'' + escapeAttr(domainOrMsg) + '\',' + price + ',true)">I\'ll Buy This One Myself</button>' +
+                    '<button type="button" class="btn btn-secondary" onclick="searchAgain()">Search Again</button>' +
+                '</div>' +
+                '<div class="domain-result-footnote">Standard registration pricing. Premium domains may vary — final price confirmed at registration.</div>';
+        } else if (type === 'available_unknown') {
+            var tld = domainOrMsg.split('.').pop();
+            html = '<div class="domain-result domain-result-warning">' +
+                '<div class="domain-result-icon"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></div>' +
+                '<div class="domain-result-body">' +
+                    '<div class="domain-result-title">' + escapeHtml(domainOrMsg) + ' is available</div>' +
+                    '<div class="domain-result-text">We don\'t have pricing for .' + escapeHtml(tld) + ' domains on file. You may need to purchase this one yourself — or try a .com which is included with your plan.</div>' +
+                '</div></div>' +
+                '<div class="domain-result-actions">' +
+                    '<button type="button" class="btn btn-primary" onclick="selectSearchedDomain(\'' + escapeAttr(domainOrMsg) + '\',null,true)">I\'ll Buy This One Myself</button>' +
+                    '<button type="button" class="btn btn-secondary" onclick="searchAgain()">Search Again</button>' +
+                '</div>';
+        } else if (type === 'taken') {
+            html = '<div class="domain-result domain-result-error">' +
+                '<div class="domain-result-icon"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg></div>' +
+                '<div class="domain-result-body">' +
+                    '<div class="domain-result-title">' + escapeHtml(domainOrMsg) + ' is already registered</div>' +
+                    '<div class="domain-result-text">Try a different name or variation!</div>' +
+                '</div></div>' +
+                '<button type="button" class="btn btn-secondary btn-full" style="margin-top:0.75rem;" onclick="searchAgain()">Search Again</button>';
+        } else {
+            html = '<div class="domain-result domain-result-error">' +
+                '<div class="domain-result-icon"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></div>' +
+                '<div class="domain-result-body">' +
+                    '<div class="domain-result-title">Oops</div>' +
+                    '<div class="domain-result-text">' + escapeHtml(domainOrMsg) + '</div>' +
+                '</div></div>';
+        }
+
+        el.innerHTML = html;
+    }
+
+    window.searchAgain = function() {
+        document.getElementById('domainSearchResult').style.display = 'none';
+        var input = document.getElementById('domainSearchInput');
+        input.value = '';
+        input.focus();
+    };
+
+    // --- Select Searched Domain ---
+    window.selectSearchedDomain = function(domain, price, selfPurchase) {
+        saveDomainChoice('search_new', domain, price, selfPurchase, function() {
+            var label = domain;
+            var detail = '';
+            if (selfPurchase) {
+                detail = 'You\'ll purchase this domain yourself — we\'ll help connect it';
+            } else if (price) {
+                detail = 'Included with your plan ($' + price.toFixed(2) + '/yr)';
+            }
+            showConfirmation(label, detail);
+        });
+    };
+
+    // --- Own Domain ---
+    window.confirmOwnDomain = function() {
+        var input = document.getElementById('ownDomainInput');
+        var domain = (input.value || '').trim();
+        if (!domain) { input.focus(); return; }
+        if (domain.indexOf('.') === -1) domain = domain + '.com';
+
+        var btn = document.getElementById('ownDomainBtn');
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
+
+        saveDomainChoice('own_domain', domain, null, false, function() {
+            btn.disabled = false;
+            btn.textContent = 'Confirm';
+            showConfirmation(domain, 'Your domain — we\'ll send DNS setup instructions');
+        }, function() {
+            btn.disabled = false;
+            btn.textContent = 'Confirm';
+        });
+    };
+
+    // --- Keep Subdomain ---
+    window.confirmKeepSubdomain = function() {
+        saveDomainChoice('keep_subdomain', null, null, false, function() {
+            var url = {{ (g.site.published_url or 'your current URL') | tojson }};
+            showConfirmation('Keep current URL', url);
+        });
+    };
+
+    // --- Save domain choice via AJAX ---
+    function saveDomainChoice(choice, domain, price, selfPurchase, onSuccess, onError) {
+        fetch('/' + siteSlug + '/domain/select', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                choice: choice,
+                domain: domain,
+                price: price,
+                self_purchase: selfPurchase
+            })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.ok) {
+                domainSelected = true;
+                updateActivateButton();
+                if (onSuccess) onSuccess();
+            } else {
+                alert(data.error || 'Something went wrong. Please try again.');
+                if (onError) onError();
+            }
+        })
+        .catch(function() {
+            alert('Network error. Please try again.');
+            if (onError) onError();
+        });
+    }
+
+    // --- Show confirmation chip ---
+    function showConfirmation(label, detail) {
+        hideAllPanels();
+
+        // Hide option cards
+        document.getElementById('domainOptions').style.display = 'none';
+
+        // Show the confirmed chip
+        document.getElementById('confirmedLabel').textContent = label;
+        document.getElementById('confirmedDetail').textContent = detail || '';
+        show('domainConfirmed');
+    }
+
+    // --- Reset ---
+    window.resetDomainChoice = function() {
+        domainSelected = false;
+        currentChoice = null;
+        updateActivateButton();
+
+        hideAllPanels();
+        hide('domainConfirmed');
+
+        // Show options again
+        document.getElementById('domainOptions').style.display = '';
+        document.getElementById('domainSearchResult').style.display = 'none';
+
+        // Reset active states
+        var options = document.querySelectorAll('.domain-option');
+        options.forEach(function(el) { el.classList.remove('domain-option-active'); });
+    };
+
+    // --- Activate button state ---
+    function updateActivateButton() {
+        var btn = document.getElementById('activateBtn');
+        var hint = document.getElementById('activateHint');
+        if (domainSelected) {
+            btn.disabled = false;
+            hint.style.display = 'none';
+        } else {
+            btn.disabled = true;
+            hint.style.display = '';
+        }
+    }
+
+    // --- Helpers ---
+    function show(id) { document.getElementById(id).style.display = ''; }
+    function hide(id) { document.getElementById(id).style.display = 'none'; }
+    function hideAllPanels() {
+        hide('panelSearchNew');
+        hide('panelOwnDomain');
+        hide('panelKeepSubdomain');
+    }
+
+    function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+    }
+
+    function escapeAttr(str) {
+        return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    // Allow Enter key on search inputs
+    document.getElementById('domainSearchInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); checkDomain(); }
+    });
+    document.getElementById('ownDomainInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); confirmOwnDomain(); }
+    });
+
+    // If domain was already chosen (page reload), show the confirmation
+    {% if g.site.domain_choice %}
+    (function() {
+        domainSelected = true;
+        updateActivateButton();
+        document.getElementById('domainOptions').style.display = 'none';
+        var label = '', detail = '';
+        {% if g.site.domain_choice == 'search_new' %}
+            label = {{ (g.site.requested_domain or '') | tojson }};
+            {% if g.site.domain_self_purchase %}
+                detail = "You'll purchase this domain yourself — we'll help connect it";
+            {% elif g.site.requested_domain_price %}
+                detail = 'Included with your plan ($' + {{ g.site.requested_domain_price | tojson }}.toFixed(2) + '/yr)';
+            {% endif %}
+        {% elif g.site.domain_choice == 'own_domain' %}
+            label = {{ (g.site.requested_domain or '') | tojson }};
+            detail = "Your domain — we'll send DNS setup instructions";
+        {% elif g.site.domain_choice == 'keep_subdomain' %}
+            label = 'Keep current URL';
+            detail = {{ (g.site.published_url or 'your current URL') | tojson }};
+        {% endif %}
+        document.getElementById('confirmedLabel').textContent = label;
+        document.getElementById('confirmedDetail').textContent = detail;
+        show('domainConfirmed');
+    })();
+    {% endif %}
+})();
+</script>
 {% endblock %}

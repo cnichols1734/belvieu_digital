@@ -16,6 +16,9 @@ stripe
 bleach
 Flask-Limiter
 
+# Domain availability checking (WHOIS + RDAP)
+python-whois
+
 # Environment
 python-dotenv
 

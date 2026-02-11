@@ -306,6 +306,15 @@ WaaS (Website-as-a-Service) portal for Chris's business: find small businesses o
 
 ## What's Next: Phase 8 — Deployment (Railway)
 
+## Domain Offer Policy
+
+- **Included:** Free custom domain (up to $25/year) with an active subscription. We register and configure it.
+- **Timeline:** Domain setup typically takes a few days after the client activates their subscription.
+- **Over $25 (premium domains):** Client purchases the domain themselves at any registrar. We provide step-by-step DNS instructions (A record or CNAME). We only need the domain name from them — no registrar login required. Once they add the DNS records, we set `custom_domain` on the site and configure the host.
+- **Client already owns a domain:** Same as above — we send DNS instructions, they point it, we connect it. No extra charge.
+- **Copy used across all touchpoints:** "Free custom domain (up to $25/yr)" in feature lists. Fine print: "Standard domains (e.g. .com) up to $25/year included with your active subscription. Domain setup typically takes a few days after activation."
+- **Touchpoints updated:** Landing page pricing, portal subscribe page, prospect outreach email, client invite email, subscription activated email, admin workspace convert form, admin workspace detail form.
+
 ## Key Design Decisions to Remember
 
 1. **Invite-only signup** — no self-registration. Admin creates workspace + site + invite token, sends link.
