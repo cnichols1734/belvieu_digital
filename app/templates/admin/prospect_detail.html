@@ -287,7 +287,7 @@
             <div class="form-group">
                 <label for="site_slug" class="form-label">Site Slug <span class="text-muted">(URL identifier)</span></label>
                 <input type="text" id="site_slug" name="site_slug" class="form-control"
-                       value="{{ prospect.business_name | lower | replace(' ', '-') }}"
+                       value="{{ prospect.business_name | slugify }}"
                        placeholder="e.g. joes-plumbing" required pattern="[a-z0-9\-]+">
                 <span class="form-hint">Used in portal URL: /&lt;slug&gt;/dashboard</span>
             </div>

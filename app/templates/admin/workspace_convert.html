@@ -25,7 +25,7 @@
         <div class="form-group">
             <label for="site_slug">Site Slug *</label>
             <input type="text" id="site_slug" name="site_slug" class="form-control"
-                   value="{{ form_data.get('site_slug', prospect.business_name | lower | replace(' ', '-')) }}"
+                   value="{{ form_data.get('site_slug', prospect.business_name | slugify) }}"
                    placeholder="e.g. marios-pizza" required>
             <div class="form-hint">URL path for the client portal: /site-slug/dashboard</div>
         </div>
