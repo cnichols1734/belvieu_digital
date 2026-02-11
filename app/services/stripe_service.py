@@ -147,8 +147,14 @@ def create_checkout_session(workspace_id, site_id, site_slug,
                 update_params["name"] = customer_name
             if update_params:
                 stripe.Customer.modify(stripe_customer_id, **update_params)
-        except stripe.error.InvalidRequestError:
-            pass  # Will be handled by the "No such customer" fallback below
+        except stripe.error.InvalidRequestError as e:
+            if "No such customer" in str(e):
+                # Customer was deleted in Stripe — recreate immediately
+                stripe_customer_id = _recreate_stripe_customer(
+                    billing_customer, workspace_id, site_slug
+                )
+            else:
+                pass  # Other errors — let checkout creation handle it
     else:
         stripe_customer_id = None
 
@@ -220,11 +226,64 @@ def create_checkout_session(workspace_id, site_id, site_slug,
     return session.url
 
 
+def _recreate_stripe_customer(billing_customer, workspace_id, site_slug=None):
+    """Replace a deleted Stripe customer with a fresh one.
+
+    Creates a new Stripe customer, updates the local BillingCustomer
+    record, and commits immediately so subsequent calls use the new ID.
+
+    Returns the new stripe_customer_id.
+    """
+    from app.models.workspace import Workspace, WorkspaceMember
+    from app.models.user import User
+
+    # Try to pull email/name from the workspace owner
+    email, name = None, None
+    workspace = db.session.get(Workspace, workspace_id)
+    if workspace:
+        owner = (
+            WorkspaceMember.query
+            .filter_by(workspace_id=workspace_id, role="owner")
+            .first()
+        )
+        if owner:
+            user = db.session.get(User, owner.user_id)
+            if user:
+                email = user.email
+                name = user.full_name
+
+    create_params = {
+        "metadata": {
+            "workspace_id": str(workspace_id),
+        }
+    }
+    if site_slug:
+        create_params["metadata"]["site_slug"] = site_slug
+    if email:
+        create_params["email"] = email
+    if name:
+        create_params["name"] = name
+
+    new_customer = stripe.Customer.create(**create_params)
+    billing_customer.stripe_customer_id = new_customer.id
+    db.session.commit()
+
+    logger.info(
+        f"Recreated Stripe customer for workspace {workspace_id}: "
+        f"{new_customer.id} (old customer was deleted in Stripe)"
+    )
+    return new_customer.id
+
+
 def create_portal_session(workspace_id, site_slug):
     """Create a Stripe Customer Portal Session.
 
     Allows the customer to manage their subscription (update payment,
     cancel, change plan) via Stripe's hosted portal.
+
+    If the stored Stripe customer was deleted (e.g. manually removed
+    from the Stripe dashboard), a new customer is created automatically
+    and the local record is updated before retrying.
 
     Returns the portal session URL.
     Raises ValueError if no billing customer exists.
@@ -240,10 +299,22 @@ def create_portal_session(workspace_id, site_slug):
     if not billing_customer:
         raise ValueError("No billing customer found for this workspace")
 
-    session = stripe.billing_portal.Session.create(
-        customer=billing_customer.stripe_customer_id,
-        return_url=f"{app_base_url}/{site_slug}/dashboard",
-    )
+    try:
+        session = stripe.billing_portal.Session.create(
+            customer=billing_customer.stripe_customer_id,
+            return_url=f"{app_base_url}/{site_slug}/dashboard",
+        )
+    except stripe.error.InvalidRequestError as e:
+        if "No such customer" in str(e):
+            new_id = _recreate_stripe_customer(
+                billing_customer, workspace_id, site_slug
+            )
+            session = stripe.billing_portal.Session.create(
+                customer=new_id,
+                return_url=f"{app_base_url}/{site_slug}/dashboard",
+            )
+        else:
+            raise
 
     return session.url
 
