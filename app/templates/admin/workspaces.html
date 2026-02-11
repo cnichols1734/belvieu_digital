@@ -3,13 +3,11 @@
 {% block title %}Workspaces — Belvieu Digital{% endblock %}
 
 {% block content %}
+{% include 'admin/_nav.html' %}
+
 <div class="page-header">
-    <div class="page-header-row">
-        <div>
-            <h1>Workspaces</h1>
-            <p>All client workspaces with subscription and invite status.</p>
-        </div>
-    </div>
+    <h1>Workspaces</h1>
+    <p>All client workspaces with subscription and invite status.</p>
 </div>
 
 {% if workspace_data %}
@@ -18,11 +16,10 @@
         <thead>
             <tr>
                 <th>Workspace</th>
-                <th>Site Slug</th>
-                <th>Members</th>
-                <th>Edits</th>
                 <th>Plan</th>
                 <th>Subscription</th>
+                <th>Members</th>
+                <th>Edits</th>
                 <th>Invite</th>
                 <th>Created</th>
             </tr>
@@ -34,38 +31,8 @@
                     <a href="{{ url_for('admin.workspace_detail', workspace_id=wd.workspace.id) }}" class="table-link">
                         {{ wd.workspace.name }}
                     </a>
-                    {% if wd.workspace.prospect_id %}
-                        <span class="text-tertiary text-xs" style="margin-left: 0.25rem;">
-                            <a href="{{ url_for('admin.prospect_detail', prospect_id=wd.workspace.prospect_id) }}">from prospect</a>
-                        </span>
-                    {% endif %}
-                </td>
-                <td>
                     {% if wd.site %}
-                        <span class="font-mono text-sm">/{{ wd.site.site_slug }}/</span>
-                    {% else %}
-                        <span class="text-tertiary">—</span>
-                    {% endif %}
-                </td>
-                <td class="text-sm">
-                    {{ wd.member_count }}
-                    <span class="text-tertiary">{{ 'user' if wd.member_count == 1 else 'users' }}</span>
-                </td>
-                <td>
-                    {% set eu = edit_usage_map.get(wd.workspace.id, {}) %}
-                    {% if eu.get('limit') is not none %}
-                        <span class="edit-usage-compact">
-                            <span class="font-medium" {% if eu.get('used', 0) >= eu.get('limit', 0) %}style="color: var(--red-600);"{% endif %}>
-                                {{ eu.get('used', 0) }}/{{ eu.get('limit') }}
-                            </span>
-                            <span class="edit-usage-bar-container">
-                                <span class="edit-usage-bar" style="width: {{ [eu.get('used', 0) / eu.get('limit', 1) * 100, 100] | min }}%;
-                                     {% if eu.get('used', 0) >= eu.get('limit', 0) %}background: var(--red-500);{% endif %}"></span>
-                            </span>
-                        </span>
-                    {% else %}
-                        <span class="text-sm">{{ eu.get('used', 0) }}</span>
-                        <span class="text-tertiary text-xs">∞</span>
+                        <div class="text-tertiary text-xs font-mono">/{{ wd.site.site_slug }}/</div>
                     {% endif %}
                 </td>
                 <td>
@@ -90,6 +57,24 @@
                         {% endif %}
                     {% else %}
                         <span class="text-tertiary text-sm">—</span>
+                    {% endif %}
+                </td>
+                <td class="text-sm">{{ wd.member_count }}</td>
+                <td>
+                    {% set eu = edit_usage_map.get(wd.workspace.id, {}) %}
+                    {% if eu.get('limit') is not none %}
+                        <span class="edit-usage-compact">
+                            <span class="font-medium" {% if eu.get('used', 0) >= eu.get('limit', 0) %}style="color: var(--red-600);"{% endif %}>
+                                {{ eu.get('used', 0) }}/{{ eu.get('limit') }}
+                            </span>
+                            <span class="edit-usage-bar-container">
+                                <span class="edit-usage-bar" style="width: {{ [eu.get('used', 0) / eu.get('limit', 1) * 100, 100] | min }}%;
+                                     {% if eu.get('used', 0) >= eu.get('limit', 0) %}background: var(--red-500);{% endif %}"></span>
+                            </span>
+                        </span>
+                    {% else %}
+                        <span class="text-sm">{{ eu.get('used', 0) }}</span>
+                        <span class="text-tertiary text-xs">&infin;</span>
                     {% endif %}
                 </td>
                 <td>

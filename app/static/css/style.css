@@ -2555,3 +2555,245 @@ select.form-control {
 .lightbox-close:hover {
     opacity: 1;
 }
+
+/* ══════════════════════════════════════════════════
+   ADMIN UI REDESIGN
+   ══════════════════════════════════════════════════ */
+
+/* ─── Admin Sub-Navigation ─── */
+.admin-subnav {
+    display: flex;
+    gap: 0;
+    margin-bottom: 2rem;
+}
+
+.admin-subnav-link {
+    padding: 0.5rem 0.875rem;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-tertiary);
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    transition: color var(--transition), background var(--transition);
+}
+.admin-subnav-link:hover {
+    color: var(--color-text);
+    background: var(--gray-100);
+    text-decoration: none;
+}
+.admin-subnav-link.active {
+    color: var(--color-text);
+    background: var(--gray-100);
+    font-weight: 600;
+}
+
+/* ─── Breadcrumb ─── */
+.breadcrumb {
+    font-size: 13px;
+    color: var(--color-text-tertiary);
+    margin-bottom: 1rem;
+}
+.breadcrumb a {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+}
+.breadcrumb a:hover {
+    color: var(--color-text);
+    text-decoration: none;
+}
+.breadcrumb-sep {
+    margin: 0 0.375rem;
+    color: var(--color-text-tertiary);
+}
+
+/* ─── Pipeline Step Indicator ─── */
+.pipeline-steps {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 1.25rem 0;
+}
+
+.pipeline-step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-tertiary);
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+}
+
+.pipeline-step.completed {
+    color: var(--color-text-secondary);
+}
+
+.pipeline-step.current {
+    color: var(--color-text);
+    font-weight: 600;
+}
+
+.pipeline-step.declined {
+    color: var(--red-600);
+}
+
+.pipeline-step-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--gray-200);
+    flex-shrink: 0;
+}
+
+.pipeline-step.completed .pipeline-step-dot {
+    background: var(--gray-900);
+}
+
+.pipeline-step.current .pipeline-step-dot {
+    background: var(--gray-900);
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+}
+
+.pipeline-step.declined .pipeline-step-dot {
+    background: var(--red-500);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.pipeline-step-line {
+    width: 24px;
+    height: 1px;
+    background: var(--gray-200);
+    flex-shrink: 0;
+    margin: 0 0.375rem;
+}
+
+.pipeline-step-line.completed {
+    background: var(--gray-900);
+}
+
+/* ─── Consolidated Control Groups ─── */
+.control-group {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--color-border-light);
+}
+.control-group:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+.control-group:first-child {
+    padding-top: 0;
+}
+
+.control-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.375rem;
+}
+
+.control-inline {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+.control-inline .form-control {
+    flex: 1;
+}
+
+/* ─── Attention Card (at-risk / cancelling) ─── */
+.attention-section {
+    padding: 0.625rem 0;
+    border-bottom: 1px solid var(--color-border-light);
+}
+.attention-section:last-child {
+    border-bottom: none;
+}
+.attention-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+.attention-label .count {
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    padding: 0 0.375rem;
+    border-radius: 9999px;
+    text-transform: none;
+    letter-spacing: 0;
+}
+.attention-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.35rem 0;
+    font-size: 13px;
+}
+.attention-item a {
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+/* ─── Section Heading (used inside cards) ─── */
+.section-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.5rem;
+    margin-top: 1.25rem;
+}
+.section-label:first-child {
+    margin-top: 0;
+}
+
+/* ─── Compact Quick Actions ─── */
+.quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+/* ─── Dashboard stat improvement ─── */
+.stat-card-accent {
+    border-left: 3px solid var(--gray-900);
+}
+
+/* ─── Responsive admin subnav ─── */
+@media (max-width: 480px) {
+    .admin-subnav {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: 0;
+    }
+    .admin-subnav::-webkit-scrollbar {
+        display: none;
+    }
+    .admin-subnav-link {
+        flex-shrink: 0;
+    }
+
+    .pipeline-steps {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+    .pipeline-step-line {
+        width: 16px;
+    }
+}

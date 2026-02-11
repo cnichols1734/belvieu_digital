@@ -3,6 +3,15 @@
 {% block title %}Add Prospect — Belvieu Digital{% endblock %}
 
 {% block content %}
+{% include 'admin/_nav.html' %}
+
+{# Breadcrumb #}
+<div class="breadcrumb">
+    <a href="{{ url_for('admin.prospect_list') }}">Prospects</a>
+    <span class="breadcrumb-sep">/</span>
+    <span>New</span>
+</div>
+
 <div class="page-header">
     <h1>Add New Prospect</h1>
     <p>Record a business you found on Google Maps, Facebook, or via referral.</p>
@@ -73,7 +82,7 @@
         <div class="form-group">
             <label for="notes">Notes</label>
             <textarea id="notes" name="notes" class="form-control" rows="4"
-                      placeholder="e.g. No website, pizza shop on Main St, 4.8★ on Google, good reviews...">{{ form_data.get('notes', '') }}</textarea>
+                      placeholder="e.g. No website, pizza shop on Main St, 4.8 stars on Google, good reviews...">{{ form_data.get('notes', '') }}</textarea>
         </div>
 
         <div class="flex gap-1">

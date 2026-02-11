@@ -3,6 +3,8 @@
 {% block title %}Prospects — Belvieu Digital{% endblock %}
 
 {% block content %}
+{% include 'admin/_nav.html' %}
+
 <div class="page-header">
     <div class="page-header-row">
         <div>
@@ -13,7 +15,7 @@
     </div>
 </div>
 
-<!-- Status Filter Tabs -->
+{# Status Filter Tabs #}
 <div class="ticket-filters">
     <a href="{{ url_for('admin.prospect_list') }}"
        class="ticket-filter-tab {{ 'active' if not status_filter }}">All</a>
@@ -29,11 +31,9 @@
         <thead>
             <tr>
                 <th>Business</th>
+                <th>Contact</th>
                 <th>Source</th>
                 <th>Status</th>
-                <th>Edits</th>
-                <th>Contact</th>
-                <th>Demo URL</th>
                 <th>Updated</th>
             </tr>
         </thead>
@@ -50,6 +50,19 @@
                             {{ prospect.business_name }}
                         </a>
                     {% endif %}
+                    {% if prospect.demo_url %}
+                        <span class="text-tertiary text-xs" style="margin-left: 0.25rem;">
+                            <a href="{{ prospect.demo_url }}" target="_blank">demo</a>
+                        </span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if prospect.contact_name %}
+                        <span class="font-medium">{{ prospect.contact_name }}</span>
+                    {% endif %}
+                    {% if prospect.contact_email %}
+                        <br><span class="text-muted text-sm">{{ prospect.contact_email }}</span>
+                    {% endif %}
                 </td>
                 <td>
                     <span class="badge badge-{{ prospect.source }}">
@@ -61,12 +74,11 @@
                         <span class="badge-dot"></span>
                         {{ prospect.status | replace('_', ' ') | title }}
                     </span>
-                </td>
-                <td>
+                    {# Show edit usage inline for converted prospects #}
                     {% if prospect.status == 'converted' and prospect.workspace_id %}
                         {% set eu = edit_usage_map.get(prospect.workspace_id, {}) %}
                         {% if eu.get('limit') is not none %}
-                            <span class="edit-usage-compact">
+                            <span class="edit-usage-compact" style="margin-left: 0.5rem;">
                                 <span class="font-medium" {% if eu.get('used', 0) >= eu.get('limit', 0) %}style="color: var(--red-600);"{% endif %}>
                                     {{ eu.get('used', 0) }}/{{ eu.get('limit') }}
                                 </span>
@@ -75,27 +87,7 @@
                                          {% if eu.get('used', 0) >= eu.get('limit', 0) %}background: var(--red-500);{% endif %}"></span>
                                 </span>
                             </span>
-                        {% else %}
-                            <span class="text-sm">{{ eu.get('used', 0) }}</span>
-                            <span class="text-tertiary text-xs">∞</span>
                         {% endif %}
-                    {% else %}
-                        <span class="text-tertiary text-sm">—</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if prospect.contact_name %}
-                        <span class="font-medium">{{ prospect.contact_name }}</span><br>
-                    {% endif %}
-                    {% if prospect.contact_email %}
-                        <span class="text-muted text-sm">{{ prospect.contact_email }}</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if prospect.demo_url %}
-                        <a href="{{ prospect.demo_url }}" target="_blank" class="text-sm">View</a>
-                    {% else %}
-                        <span class="text-tertiary text-sm">—</span>
                     {% endif %}
                 </td>
                 <td class="text-muted text-sm">
