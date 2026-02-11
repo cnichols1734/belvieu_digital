@@ -2418,11 +2418,8 @@ select.form-control {
     position: relative;
 }
 
-.file-preview-item img {
-    width: 28px;
-    height: 28px;
-    border-radius: 4px;
-    object-fit: cover;
+.file-preview-item svg {
+    flex-shrink: 0;
 }
 
 .file-preview-remove {

@@ -45,8 +45,10 @@
     </div>
 </div>
 
-{# ── Original Description ── #}
+{# ── Original Description (skip if first message duplicates it with attachments) ── #}
+{% set first_msg_has_desc = messages and messages[0].message == ticket.description and messages[0].attachments %}
 <div class="ticket-thread">
+    {% if not first_msg_has_desc %}
     <div class="ticket-message ticket-message-client">
         <div class="ticket-message-header">
             <div class="ticket-message-avatar">
@@ -63,6 +65,7 @@
             {{ ticket.description }}
         </div>
     </div>
+    {% endif %}
 
     {# ── Thread Messages ── #}
     {% for msg in messages %}
@@ -153,86 +156,9 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/file-upload.js') }}"></script>
 <script>
-(function() {
-    // Lightbox for images
-    document.querySelectorAll('.ticket-attachment-img').forEach(function(link) {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            const overlay = document.createElement('div');
-            overlay.className = 'lightbox-overlay';
-            const close = document.createElement('button');
-            close.className = 'lightbox-close';
-            close.innerHTML = '&times;';
-            const img = document.createElement('img');
-            img.src = this.href;
-            img.alt = this.querySelector('img').alt;
-            overlay.appendChild(close);
-            overlay.appendChild(img);
-            document.body.appendChild(overlay);
-            document.body.style.overflow = 'hidden';
-            function closeLightbox() { overlay.remove(); document.body.style.overflow = ''; }
-            overlay.addEventListener('click', closeLightbox);
-            close.addEventListener('click', closeLightbox);
-            document.addEventListener('keydown', function esc(ev) {
-                if (ev.key === 'Escape') { closeLightbox(); document.removeEventListener('keydown', esc); }
-            });
-        });
-    });
-
-    // File upload preview
-    function initUploadZone(zoneId, previewId) {
-        const zone = document.getElementById(zoneId);
-        if (!zone) return;
-        const input = zone.querySelector('.file-upload-input');
-        const preview = document.getElementById(previewId);
-        let selectedFiles = new DataTransfer();
-        function updatePreview() {
-            preview.innerHTML = '';
-            for (let i = 0; i < selectedFiles.files.length; i++) {
-                const file = selectedFiles.files[i];
-                const item = document.createElement('div');
-                item.className = 'file-preview-item';
-                if (file.type.startsWith('image/')) {
-                    const img = document.createElement('img');
-                    img.src = URL.createObjectURL(file);
-                    item.appendChild(img);
-                }
-                const name = document.createElement('span');
-                name.textContent = file.name.length > 25 ? file.name.substring(0, 22) + '...' : file.name;
-                item.appendChild(name);
-                const remove = document.createElement('button');
-                remove.type = 'button';
-                remove.className = 'file-preview-remove';
-                remove.textContent = '\u00d7';
-                remove.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    const dt = new DataTransfer();
-                    for (let j = 0; j < selectedFiles.files.length; j++) {
-                        if (j !== i) dt.items.add(selectedFiles.files[j]);
-                    }
-                    selectedFiles = dt;
-                    input.files = selectedFiles.files;
-                    updatePreview();
-                });
-                item.appendChild(remove);
-                preview.appendChild(item);
-            }
-        }
-        input.addEventListener('change', function() {
-            for (let i = 0; i < this.files.length; i++) selectedFiles.items.add(this.files[i]);
-            input.files = selectedFiles.files;
-            updatePreview();
-        });
-        ['dragenter','dragover'].forEach(e => zone.addEventListener(e, function(ev) { ev.preventDefault(); zone.classList.add('dragover'); }));
-        ['dragleave','drop'].forEach(e => zone.addEventListener(e, function(ev) { ev.preventDefault(); zone.classList.remove('dragover'); }));
-        zone.addEventListener('drop', function(e) {
-            for (let i = 0; i < e.dataTransfer.files.length; i++) selectedFiles.items.add(e.dataTransfer.files[i]);
-            input.files = selectedFiles.files;
-            updatePreview();
-        });
-    }
-    initUploadZone('replyUploadZone', 'replyFilePreview');
-})();
+initLightbox();
+initUploadZone('replyUploadZone', 'replyFilePreview');
 </script>
 {% endblock %}

@@ -161,15 +161,14 @@ def ticket_new(site_slug):
                 category=category,
             )
 
-            # Handle file attachments — create a system message to hold them
+            # Handle file attachments — attach to a first message carrying the description
             uploaded_files = request.files.getlist("attachments")
             uploaded_files = [f for f in uploaded_files if f and f.filename]
             if uploaded_files:
-                # Attachments on ticket creation go on an auto-created first message
                 msg = ticket_service.add_message(
                     ticket_id=ticket.id,
                     user_id=current_user.id,
-                    message="(attached files)",
+                    message=description,
                     is_internal=False,
                 )
                 ticket_service.add_attachments(ticket.id, msg.id, uploaded_files)
