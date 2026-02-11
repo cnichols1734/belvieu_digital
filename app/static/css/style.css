@@ -2773,7 +2773,35 @@ select.form-control {
     border-left: 3px solid var(--gray-900);
 }
 
-/* ─── Responsive admin subnav ─── */
+/* ─── Wider admin layout ─── */
+.main:has(.admin-subnav) {
+    max-width: 1320px;
+}
+
+/* Detail page grid: wider left column for thread/details */
+.content-grid-detail {
+    display: grid;
+    grid-template-columns: 1.7fr 1fr;
+    gap: 2rem;
+}
+.content-grid-detail > * {
+    min-width: 0;
+}
+
+/* ─── Responsive admin ─── */
+@media (max-width: 1024px) {
+    .main:has(.admin-subnav) {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .content-grid-detail {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+}
+
 @media (max-width: 480px) {
     .admin-subnav {
         overflow-x: auto;

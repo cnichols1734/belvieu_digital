@@ -59,7 +59,7 @@
    TAB 1: OVERVIEW
    ═══════════════════════════════════════════════ #}
 <div class="admin-tab-panel {{ 'active' if active_tab == 'overview' }}" id="tab-overview">
-    <div class="content-grid">
+    <div class="content-grid-detail">
         {# Left Column #}
         <div>
             {# Site Info #}
@@ -357,7 +357,7 @@
    ═══════════════════════════════════════════════ #}
 <div class="admin-tab-panel {{ 'active' if active_tab == 'business' }}" id="tab-business">
     {% if prospect %}
-    <div style="max-width: 720px;">
+    <div style="max-width: 800px;">
         {# View Mode #}
         <div class="card" id="business-view">
             <div class="card-header">
@@ -496,7 +496,7 @@
         </div>
     </div>
     {% else %}
-    <div class="card" style="max-width: 720px;">
+    <div class="card" style="max-width: 800px;">
         <div class="card-header">Business Info</div>
         <p class="text-muted text-sm">This workspace was not created from a prospect record.</p>
     </div>
@@ -508,7 +508,7 @@
    ═══════════════════════════════════════════════ #}
 <div class="admin-tab-panel {{ 'active' if active_tab == 'site' }}" id="tab-site">
     {% if site %}
-    <div style="max-width: 720px;">
+    <div style="max-width: 800px;">
         <div class="card mb-2">
             <div class="card-header">Site Configuration</div>
 
@@ -599,7 +599,7 @@
         </div>
     </div>
     {% else %}
-    <div class="card" style="max-width: 720px;">
+    <div class="card" style="max-width: 800px;">
         <div class="card-header">Site Settings</div>
         <p class="text-muted text-sm">No site has been created for this workspace yet.</p>
     </div>
@@ -610,7 +610,7 @@
    TAB 4: SETTINGS
    ═══════════════════════════════════════════════ #}
 <div class="admin-tab-panel {{ 'active' if active_tab == 'settings' }}" id="tab-settings">
-    <div style="max-width: 720px;">
+    <div style="max-width: 800px;">
         <form method="POST" action="{{ url_for('admin.workspace_settings_update', workspace_id=workspace.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -710,7 +710,7 @@
    TAB 5: INVITES
    ═══════════════════════════════════════════════ #}
 <div class="admin-tab-panel {{ 'active' if active_tab == 'invites' }}" id="tab-invites">
-    <div style="max-width: 720px;">
+    <div style="max-width: 800px;">
         <div class="card mb-2">
             <div class="card-header">Generate Invite</div>
             <p class="text-sm text-muted" style="margin-bottom: 0.75rem;">
