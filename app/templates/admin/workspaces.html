@@ -83,6 +83,11 @@
                             <span class="badge-dot"></span>
                             {{ wd.subscription.status | replace('_', ' ') | title }}
                         </span>
+                        {% if wd.subscription.cancel_at_period_end %}
+                            <span class="badge" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; margin-left: 4px; font-size: 0.7rem;">
+                                Cancelling
+                            </span>
+                        {% endif %}
                     {% else %}
                         <span class="text-tertiary text-sm">—</span>
                     {% endif %}

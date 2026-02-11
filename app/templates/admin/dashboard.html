@@ -86,8 +86,11 @@
             <a href="{{ url_for('admin.workspace_list') }}" class="btn btn-secondary btn-full mb-1">
                 Manage Workspaces
             </a>
-            <a href="{{ url_for('admin.ticket_list') }}" class="btn btn-secondary btn-full">
+            <a href="{{ url_for('admin.ticket_list') }}" class="btn btn-secondary btn-full mb-1">
                 View All Tickets
+            </a>
+            <a href="{{ url_for('admin.stripe_health') }}" class="btn btn-secondary btn-full">
+                Stripe Health
             </a>
         </div>
 
@@ -131,6 +134,32 @@
             <span class="badge badge-past_due" style="margin-left: 0.5rem;"><span class="badge-dot"></span> Past Due</span>
         </div>
         <span class="text-muted text-sm">{{ item.subscription.plan|capitalize if item.subscription.plan else '' }}</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{# ── Cancelling Soon ── #}
+{% if cancelling_data %}
+<div class="card mt-2" style="border-color: #fde68a;">
+    <div class="card-header">
+        <span style="color: #a16207;">
+            <svg style="width: 16px; height: 16px; vertical-align: -2px; margin-right: 4px;" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+            </svg>
+            Cancelling Soon ({{ cancelling_data|length }})
+        </span>
+    </div>
+    <p class="text-sm text-muted" style="margin-bottom: 0.75rem;">These clients have cancelled but still have access until their period ends.</p>
+    {% for item in cancelling_data %}
+    <div class="admin-detail-row">
+        <div>
+            <a href="{{ url_for('admin.workspace_detail', workspace_id=item.workspace.id) }}" class="font-medium">{{ item.workspace.name }}</a>
+            <span class="badge" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; margin-left: 0.5rem; font-size: 0.75rem;">Cancelling</span>
+        </div>
+        <span class="text-muted text-sm">
+            Ends {{ item.subscription.current_period_end.strftime('%b %d, %Y') if item.subscription.current_period_end else '—' }}
+        </span>
     </div>
     {% endfor %}
 </div>
