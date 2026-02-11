@@ -343,13 +343,18 @@ def _handle_checkout_completed(event):
 
     current_period_end = _extract_period_end(sub)
 
+    is_cancelling = (
+        sub.get("cancel_at_period_end", False)
+        or sub.get("cancel_at") is not None
+    )
+
     upsert_subscription(
         workspace_id=workspace_id,
         stripe_subscription_id=stripe_subscription_id,
         status=sub.get("status", "active"),
         stripe_price_id=stripe_price_id,
         current_period_end=current_period_end,
-        cancel_at_period_end=sub.get("cancel_at_period_end", False),
+        cancel_at_period_end=is_cancelling,
         app_config=current_app.config,
     )
 
@@ -436,13 +441,20 @@ def _handle_subscription_updated(event):
 
     status = sub_data.get("status", "active")
 
+    # Stripe uses cancel_at_period_end OR cancel_at (a future timestamp)
+    # to indicate the subscription is set to cancel. Treat either as cancelling.
+    is_cancelling = (
+        sub_data.get("cancel_at_period_end", False)
+        or sub_data.get("cancel_at") is not None
+    )
+
     upsert_subscription(
         workspace_id=workspace_id,
         stripe_subscription_id=stripe_subscription_id,
         status=status,
         stripe_price_id=stripe_price_id,
         current_period_end=current_period_end,
-        cancel_at_period_end=sub_data.get("cancel_at_period_end", False),
+        cancel_at_period_end=is_cancelling,
         app_config=current_app.config,
     )
 
