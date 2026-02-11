@@ -1,6 +1,6 @@
 """Billing blueprint — /<site_slug>/billing/*
 
-Stripe Checkout, Customer Portal, success/cancel pages.
+Stripe Checkout, Customer Portal, success/cancel pages, domain search.
 
 Routes:
 - POST /<site_slug>/billing/checkout  — create Checkout Session, redirect to Stripe
@@ -8,6 +8,8 @@ Routes:
 - GET  /<site_slug>/billing/cancel    — user cancelled checkout, redirect to dashboard
 - POST /<site_slug>/billing/portal    — create Customer Portal Session, redirect to Stripe
 - GET  /<site_slug>/billing           — billing overview (current plan, manage billing)
+- POST /<site_slug>/domain/check      — AJAX: check domain availability + pricing
+- POST /<site_slug>/domain/select     — AJAX: store domain choice
 """
 
 import logging
@@ -17,6 +19,7 @@ from flask import (
     current_app,
     flash,
     g,
+    jsonify,
     redirect,
     render_template,
     request,
@@ -25,6 +28,7 @@ from flask import (
 from flask_login import current_user
 
 from app.decorators import login_required_for_site
+from app.extensions import limiter
 from app.services.stripe_service import create_checkout_session, create_portal_session
 
 logger = logging.getLogger(__name__)
@@ -45,6 +49,11 @@ def checkout(site_slug):
     with first recurring charge deferred 30 days (first month free).
     Accessible even when access_level is 'subscribe' or 'blocked'.
     """
+    # --- Guard: domain choice must be made before checkout ---
+    if g.site and not g.site.domain_choice:
+        flash("Please choose a domain option before activating.", "error")
+        return redirect(url_for("portal.dashboard", site_slug=site_slug))
+
     try:
         checkout_url = create_checkout_session(
             workspace_id=g.workspace_id,
@@ -227,3 +236,91 @@ def billing_overview(site_slug):
         return render_template("portal/subscribe.html")
 
     return render_template("portal/billing.html")
+
+
+# ──────────────────────────────────────────────
+# POST /<site_slug>/domain/check — AJAX
+# ──────────────────────────────────────────────
+
+@billing_bp.route("/<site_slug>/domain/check", methods=["POST"])
+@login_required_for_site
+@limiter.limit("10/minute")
+def domain_check(site_slug):
+    """Check domain availability and pricing via RDAP + Cloudflare pricing.
+
+    Returns JSON with availability, price, and budget status.
+    """
+    from app.services.domain_service import check_domain_availability
+
+    data = request.get_json(silent=True) or {}
+    domain = (data.get("domain") or "").strip()
+
+    if not domain:
+        return jsonify({"error": "Please enter a domain name."}), 400
+
+    price_limit = current_app.config.get("DOMAIN_PRICE_LIMIT", 25.00)
+    result = check_domain_availability(domain, price_limit=price_limit)
+
+    if result.get("error"):
+        return jsonify(result), 400
+
+    return jsonify(result)
+
+
+# ──────────────────────────────────────────────
+# POST /<site_slug>/domain/select — AJAX
+# ──────────────────────────────────────────────
+
+@billing_bp.route("/<site_slug>/domain/select", methods=["POST"])
+@login_required_for_site
+def domain_select(site_slug):
+    """Store the client's domain choice on their Site record.
+
+    Expected JSON body:
+        choice: "search_new" | "own_domain" | "keep_subdomain"
+        domain: "example.com"  (required for search_new / own_domain)
+        price: 10.44           (only for search_new)
+        self_purchase: false   (only for search_new)
+    """
+    from app.services.domain_service import save_domain_choice
+
+    data = request.get_json(silent=True) or {}
+    choice = data.get("choice", "").strip()
+
+    valid_choices = ("search_new", "own_domain", "keep_subdomain")
+    if choice not in valid_choices:
+        return jsonify({"error": "Invalid domain choice."}), 400
+
+    domain = (data.get("domain") or "").strip() or None
+    price = data.get("price")
+    self_purchase = bool(data.get("self_purchase", False))
+
+    # Validate required fields per choice type
+    if choice in ("search_new", "own_domain") and not domain:
+        return jsonify({"error": "Please provide a domain name."}), 400
+
+    if choice == "keep_subdomain":
+        domain = None
+        price = None
+        self_purchase = False
+
+    if choice == "own_domain":
+        price = None
+        self_purchase = False
+
+    site_id = g.site.id if g.site else None
+    if not site_id:
+        return jsonify({"error": "No site found for this workspace."}), 404
+
+    success = save_domain_choice(
+        site_id=site_id,
+        choice_type=choice,
+        domain=domain,
+        price=price,
+        self_purchase=self_purchase,
+    )
+
+    if not success:
+        return jsonify({"error": "Failed to save domain choice."}), 500
+
+    return jsonify({"ok": True})

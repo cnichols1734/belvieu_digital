@@ -30,6 +30,9 @@ class Config:
     MAIL_FROM_ADDRESS = os.environ.get("MAIL_FROM_ADDRESS")  # defaults to MAIL_USERNAME
     MAIL_CONTACT_TO = os.environ.get("MAIL_CONTACT_TO", "info@belvieudigital.com")
 
+    # --- Domain search ---
+    DOMAIN_PRICE_LIMIT = float(os.environ.get("DOMAIN_PRICE_LIMIT", 25.00))
+
     # --- Optional / Supabase dual connection ---
     # Pooler URL for runtime, direct URL for migrations (DDL).
     DATABASE_DIRECT_URL = os.environ.get("DATABASE_DIRECT_URL")
