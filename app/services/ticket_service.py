@@ -7,12 +7,16 @@ Ticket.VALID_TRANSITIONS dict.
 Functions flush but do NOT commit — the caller commits.
 """
 
+import logging
+
 import bleach
 from datetime import datetime, timezone
 
 from app.extensions import db
-from app.models.ticket import Ticket, TicketMessage
+from app.models.ticket import Ticket, TicketMessage, TicketAttachment
 from app.models.audit import AuditEvent
+
+logger = logging.getLogger(__name__)
 
 
 def _sanitize(text):
@@ -150,6 +154,48 @@ def add_message(ticket_id, user_id, message, is_internal=False):
     db.session.flush()
 
     return msg
+
+
+def add_attachments(ticket_id, message_id, files):
+    """Upload and attach files to a ticket message.
+
+    Args:
+        ticket_id: Ticket UUID string.
+        message_id: TicketMessage UUID string.
+        files: List of Werkzeug FileStorage objects from request.files.
+
+    Returns:
+        List of created TicketAttachment objects.
+    """
+    from app.services.storage_service import validate_file, upload_file
+
+    attachments = []
+    for file in files:
+        ok, error = validate_file(file)
+        if not ok:
+            logger.warning(f"Skipping invalid attachment: {error}")
+            continue
+
+        try:
+            meta = upload_file(file, ticket_id, message_id)
+            attachment = TicketAttachment(
+                message_id=message_id,
+                ticket_id=ticket_id,
+                filename=meta["filename"],
+                storage_path=meta["storage_path"],
+                content_type=meta["content_type"],
+                file_size=meta["file_size"],
+                public_url=meta["public_url"],
+            )
+            db.session.add(attachment)
+            attachments.append(attachment)
+        except Exception as e:
+            logger.error(f"Failed to upload attachment {file.filename}: {e}")
+            continue
+
+    if attachments:
+        db.session.flush()
+    return attachments
 
 
 def update_status(ticket_id, new_status, actor_user_id):

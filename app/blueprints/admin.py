@@ -1254,18 +1254,24 @@ def ticket_reply(ticket_id):
 
     message = request.form.get("message", "").strip()
     is_internal = request.form.get("is_internal") == "on"
+    uploaded_files = request.files.getlist("attachments")
+    uploaded_files = [f for f in uploaded_files if f and f.filename]
 
-    if not message:
+    if not message and not uploaded_files:
         flash("Reply cannot be empty.", "error")
         return redirect(url_for("admin.ticket_detail", ticket_id=ticket_id))
 
     try:
-        ticket_service.add_message(
+        msg = ticket_service.add_message(
             ticket_id=ticket_id,
             user_id=current_user.id,
-            message=message,
+            message=message or "(attached files)",
             is_internal=is_internal,
         )
+
+        if uploaded_files:
+            ticket_service.add_attachments(ticket_id, msg.id, uploaded_files)
+
         db.session.commit()
 
         # Send email to client for non-internal replies

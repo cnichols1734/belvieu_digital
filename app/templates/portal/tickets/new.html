@@ -14,7 +14,7 @@
 </div>
 
 <div class="card" style="max-width: 640px;">
-    <form method="POST" action="{{ url_for('portal.ticket_new', site_slug=g.site.site_slug) }}">
+    <form method="POST" action="{{ url_for('portal.ticket_new', site_slug=g.site.site_slug) }}" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <div class="form-group">
@@ -42,10 +42,86 @@
                       rows="6" required>{{ description|default('', true) }}</textarea>
         </div>
 
+        <div class="form-group">
+            <label for="attachments">Attachments</label>
+            <div class="file-upload-zone" id="uploadZone">
+                <input type="file" id="attachments" name="attachments" multiple
+                       accept="image/*,.pdf" class="file-upload-input">
+                <div class="file-upload-content">
+                    <svg class="file-upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"/>
+                    </svg>
+                    <span class="file-upload-text">Drop files here or <strong>browse</strong></span>
+                    <span class="file-upload-hint">Images and PDFs, up to 10 MB each</span>
+                </div>
+                <div class="file-upload-preview" id="filePreview"></div>
+            </div>
+        </div>
+
         <div class="flex items-center gap-1" style="padding-top: 0.5rem;">
             <button type="submit" class="btn btn-primary">Submit ticket</button>
             <a href="{{ url_for('portal.ticket_list', site_slug=g.site.site_slug) }}" class="btn btn-ghost">Cancel</a>
         </div>
     </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    function initUploadZone(zoneId, previewId) {
+        const zone = document.getElementById(zoneId);
+        if (!zone) return;
+        const input = zone.querySelector('.file-upload-input');
+        const preview = document.getElementById(previewId);
+        let selectedFiles = new DataTransfer();
+
+        function updatePreview() {
+            preview.innerHTML = '';
+            for (let i = 0; i < selectedFiles.files.length; i++) {
+                const file = selectedFiles.files[i];
+                const item = document.createElement('div');
+                item.className = 'file-preview-item';
+                if (file.type.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(file);
+                    item.appendChild(img);
+                }
+                const name = document.createElement('span');
+                name.textContent = file.name.length > 25 ? file.name.substring(0, 22) + '...' : file.name;
+                item.appendChild(name);
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.className = 'file-preview-remove';
+                remove.textContent = '\u00d7';
+                remove.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const dt = new DataTransfer();
+                    for (let j = 0; j < selectedFiles.files.length; j++) {
+                        if (j !== i) dt.items.add(selectedFiles.files[j]);
+                    }
+                    selectedFiles = dt;
+                    input.files = selectedFiles.files;
+                    updatePreview();
+                });
+                item.appendChild(remove);
+                preview.appendChild(item);
+            }
+        }
+        input.addEventListener('change', function() {
+            for (let i = 0; i < this.files.length; i++) selectedFiles.items.add(this.files[i]);
+            input.files = selectedFiles.files;
+            updatePreview();
+        });
+        ['dragenter','dragover'].forEach(e => zone.addEventListener(e, function(ev) { ev.preventDefault(); zone.classList.add('dragover'); }));
+        ['dragleave','drop'].forEach(e => zone.addEventListener(e, function(ev) { ev.preventDefault(); zone.classList.remove('dragover'); }));
+        zone.addEventListener('drop', function(e) {
+            for (let i = 0; i < e.dataTransfer.files.length; i++) selectedFiles.items.add(e.dataTransfer.files[i]);
+            input.files = selectedFiles.files;
+            updatePreview();
+        });
+    }
+    initUploadZone('uploadZone', 'filePreview');
+})();
+</script>
 {% endblock %}

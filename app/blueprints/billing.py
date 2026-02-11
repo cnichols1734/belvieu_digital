@@ -50,7 +50,7 @@ def checkout(site_slug):
     Accessible even when access_level is 'subscribe' or 'blocked'.
     """
     # --- Guard: domain choice must be made before checkout ---
-    if g.site and not g.site.domain_choice:
+    if not g.site or not g.site.domain_choice:
         flash("Please choose a domain option before activating.", "error")
         return redirect(url_for("portal.dashboard", site_slug=site_slug))
 

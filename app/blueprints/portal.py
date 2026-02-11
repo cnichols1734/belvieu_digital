@@ -160,6 +160,20 @@ def ticket_new(site_slug):
                 description=description,
                 category=category,
             )
+
+            # Handle file attachments — create a system message to hold them
+            uploaded_files = request.files.getlist("attachments")
+            uploaded_files = [f for f in uploaded_files if f and f.filename]
+            if uploaded_files:
+                # Attachments on ticket creation go on an auto-created first message
+                msg = ticket_service.add_message(
+                    ticket_id=ticket.id,
+                    user_id=current_user.id,
+                    message="(attached files)",
+                    is_internal=False,
+                )
+                ticket_service.add_attachments(ticket.id, msg.id, uploaded_files)
+
             db.session.commit()
 
             # Email notification to admin
@@ -240,19 +254,26 @@ def ticket_reply(site_slug, ticket_id):
         return redirect(url_for("portal.ticket_list", site_slug=site_slug))
 
     message = request.form.get("message", "").strip()
-    if not message:
+    uploaded_files = request.files.getlist("attachments")
+    uploaded_files = [f for f in uploaded_files if f and f.filename]
+
+    if not message and not uploaded_files:
         flash("Reply cannot be empty.", "error")
         return redirect(
             url_for("portal.ticket_detail", site_slug=site_slug, ticket_id=ticket_id)
         )
 
     try:
-        ticket_service.add_message(
+        msg = ticket_service.add_message(
             ticket_id=ticket_id,
             user_id=current_user.id,
-            message=message,
+            message=message or "(attached files)",
             is_internal=False,  # client replies are never internal
         )
+
+        if uploaded_files:
+            ticket_service.add_attachments(ticket_id, msg.id, uploaded_files)
+
         db.session.commit()
 
         # Email notification to admin

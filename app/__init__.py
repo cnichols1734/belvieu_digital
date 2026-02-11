@@ -82,6 +82,16 @@ def create_app(config_name=None):
                     ))
         return render_template("landing.html")
 
+    # --- Local file serving (dev only) ---
+    if app.debug:
+        @app.route("/uploads/<path:filepath>")
+        def serve_upload(filepath):
+            """Serve uploaded files from instance/uploads in dev mode."""
+            import os
+            from flask import send_from_directory
+            upload_dir = os.path.join(app.instance_path, "uploads")
+            return send_from_directory(upload_dir, filepath)
+
     # --- Error handlers ---
     @app.errorhandler(403)
     def forbidden(e):
@@ -119,7 +129,7 @@ def create_app(config_name=None):
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' https://js.stripe.com; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-            "img-src 'self' data: https://api.microlink.io; "
+            "img-src 'self' data: https://api.microlink.io https://*.supabase.co; "
             "font-src 'self' https://fonts.gstatic.com; "
             "connect-src 'self' https://api.stripe.com; "
             "frame-src https://js.stripe.com https://hooks.stripe.com; "

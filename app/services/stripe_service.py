@@ -74,6 +74,7 @@ def _send_activation_email(workspace_id, site_slug):
 
         app_base_url = current_app.config["APP_BASE_URL"]
         dashboard_url = f"{app_base_url}/{site_slug}/dashboard"
+        billing_url = f"{app_base_url}/{site_slug}/billing"
 
         # Send to all owners of this workspace
         owners = (
@@ -92,6 +93,7 @@ def _send_activation_email(workspace_id, site_slug):
                         "business_name": workspace.name,
                         "customer_name": user.full_name or "",
                         "dashboard_url": dashboard_url,
+                        "billing_url": billing_url,
                     },
                 )
                 logger.info(f"Activation email sent to {user.email} for workspace {workspace_id}")
