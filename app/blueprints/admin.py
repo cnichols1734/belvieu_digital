@@ -507,55 +507,86 @@ def prospect_convert(prospect_id):
         custom_domain = request.form.get("custom_domain", "").strip() or None
         invite_email = request.form.get("invite_email", "").strip() or None
 
-        # Validation
-        if not site_slug:
-            flash("Site slug is required.", "error")
-            return render_template("admin/workspace_convert.html",
-                                   prospect=prospect, form_data=request.form)
-
-        # Check slug uniqueness
-        existing_site = Site.query.filter_by(site_slug=site_slug).first()
-        if existing_site:
-            flash(f"Site slug '{site_slug}' is already taken.", "error")
-            return render_template("admin/workspace_convert.html",
-                                   prospect=prospect, form_data=request.form)
-
         if not display_name:
             display_name = prospect.business_name
 
-        # 1. Create workspace
-        workspace = Workspace(
-            name=prospect.business_name,
-            prospect_id=prospect.id,
-        )
-        db.session.add(workspace)
-        db.session.flush()
+        # ── Check if workspace/site already exist (created during outreach) ──
+        workspace = None
+        site = None
+        if prospect.workspace_id:
+            workspace = db.session.get(Workspace, prospect.workspace_id)
+            if workspace:
+                site = Site.query.filter_by(workspace_id=workspace.id).first()
 
-        # 2. Create workspace settings
-        settings = WorkspaceSettings(workspace_id=workspace.id)
-        db.session.add(settings)
+        if workspace and site:
+            # Workspace + site already created during outreach — reuse them.
+            # Update display fields if changed in the form.
+            if display_name:
+                site.display_name = display_name
+            if published_url:
+                site.published_url = published_url
+            if custom_domain:
+                site.custom_domain = custom_domain
+            db.session.flush()
 
-        # 3. Create site
-        site = Site(
-            workspace_id=workspace.id,
-            site_slug=site_slug,
-            display_name=display_name,
-            published_url=published_url or prospect.demo_url,
-            custom_domain=custom_domain,
-            status="demo",
-        )
-        db.session.add(site)
-        db.session.flush()
+            # Ensure an invite exists
+            existing_invite = WorkspaceInvite.query.filter_by(
+                workspace_id=workspace.id
+            ).filter(WorkspaceInvite.used_at.is_(None)).first()
 
-        # 4. Create invite
-        invite = invite_service.generate_invite(
-            workspace_id=workspace.id,
-            site_id=site.id,
-            email=invite_email,
-        )
-        # generate_invite commits, but we need to continue the transaction
-        # so we flush the rest. Actually generate_invite already committed,
-        # which is fine — the workspace/settings/site are already flushed.
+            if existing_invite and existing_invite.is_valid:
+                invite = existing_invite
+            else:
+                invite = invite_service.generate_invite(
+                    workspace_id=workspace.id,
+                    site_id=site.id,
+                    email=invite_email,
+                )
+        else:
+            # No workspace yet — create from scratch
+            # Validation
+            if not site_slug:
+                flash("Site slug is required.", "error")
+                return render_template("admin/workspace_convert.html",
+                                       prospect=prospect, form_data=request.form)
+
+            # Check slug uniqueness
+            existing_site = Site.query.filter_by(site_slug=site_slug).first()
+            if existing_site:
+                flash(f"Site slug '{site_slug}' is already taken.", "error")
+                return render_template("admin/workspace_convert.html",
+                                       prospect=prospect, form_data=request.form)
+
+            # 1. Create workspace
+            workspace = Workspace(
+                name=prospect.business_name,
+                prospect_id=prospect.id,
+            )
+            db.session.add(workspace)
+            db.session.flush()
+
+            # 2. Create workspace settings
+            settings = WorkspaceSettings(workspace_id=workspace.id)
+            db.session.add(settings)
+
+            # 3. Create site
+            site = Site(
+                workspace_id=workspace.id,
+                site_slug=site_slug,
+                display_name=display_name,
+                published_url=published_url or prospect.demo_url,
+                custom_domain=custom_domain,
+                status="demo",
+            )
+            db.session.add(site)
+            db.session.flush()
+
+            # 4. Create invite
+            invite = invite_service.generate_invite(
+                workspace_id=workspace.id,
+                site_id=site.id,
+                email=invite_email,
+            )
 
         # 5. Update prospect
         prospect.status = "converted"
@@ -569,7 +600,7 @@ def prospect_convert(prospect_id):
                 "prospect_id": prospect_id,
                 "workspace_id": workspace.id,
                 "site_id": site.id,
-                "site_slug": site_slug,
+                "site_slug": site.site_slug,
             },
         )
         db.session.add(audit)
@@ -697,6 +728,10 @@ def workspace_detail(workspace_id):
 
     active_tab = request.args.get("tab", "overview")
 
+    # Determine Stripe dashboard mode for links
+    stripe_key = current_app.config.get("STRIPE_SECRET_KEY", "")
+    stripe_mode = "live" if stripe_key.startswith("sk_live_") else "test"
+
     return render_template(
         "admin/workspace_detail.html",
         workspace=workspace,
@@ -710,6 +745,7 @@ def workspace_detail(workspace_id):
         settings=workspace.settings,
         active_tab=active_tab,
         edit_usage=edit_usage,
+        stripe_mode=stripe_mode,
     )
 
 

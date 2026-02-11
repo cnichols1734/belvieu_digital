@@ -54,10 +54,58 @@ def _extract_period_end(sub_data):
 
 
 # ──────────────────────────────────────────────
+# Email Notifications
+# ──────────────────────────────────────────────
+
+def _send_activation_email(workspace_id, site_slug):
+    """Send a subscription-activated email to all workspace owners.
+
+    Called after the subscription is created/synced — both from the
+    webhook path and the checkout_status fallback.
+    """
+    try:
+        from app.models.workspace import Workspace, WorkspaceMember
+        from app.models.user import User
+        from app.services.email_service import send_email
+
+        workspace = db.session.get(Workspace, workspace_id)
+        if not workspace:
+            return
+
+        app_base_url = current_app.config["APP_BASE_URL"]
+        dashboard_url = f"{app_base_url}/{site_slug}/dashboard"
+
+        # Send to all owners of this workspace
+        owners = (
+            WorkspaceMember.query
+            .filter_by(workspace_id=workspace_id, role="owner")
+            .all()
+        )
+        for member in owners:
+            user = db.session.get(User, member.user_id)
+            if user and user.email:
+                send_email(
+                    to=user.email,
+                    subject=f"Subscription activated — {workspace.name}",
+                    template="emails/subscription_activated.html",
+                    context={
+                        "business_name": workspace.name,
+                        "customer_name": user.full_name or "",
+                        "dashboard_url": dashboard_url,
+                    },
+                )
+                logger.info(f"Activation email sent to {user.email} for workspace {workspace_id}")
+    except Exception as e:
+        # Never let email failure break the checkout flow
+        logger.error(f"Failed to send activation email for workspace {workspace_id}: {e}")
+
+
+# ──────────────────────────────────────────────
 # Checkout & Portal Sessions
 # ──────────────────────────────────────────────
 
-def create_checkout_session(workspace_id, site_id, site_slug):
+def create_checkout_session(workspace_id, site_id, site_slug,
+                            customer_email=None, customer_name=None):
     """Create a Stripe Checkout Session for subscription + setup fee.
 
     Gets or creates a Stripe Customer for this workspace, then creates
@@ -66,6 +114,11 @@ def create_checkout_session(workspace_id, site_id, site_slug):
         = $250 total at checkout (matches advertised price)
       - Recurring $59/mo subscription (STRIPE_BASIC_PRICE_ID)
       - No trial — Stripe shows "Subscribe" not "Start trial"
+
+    Args:
+        customer_email: The logged-in user's email (set on Stripe customer
+                        so receipts go to the right person).
+        customer_name:  The logged-in user's full name.
 
     Returns the Stripe checkout session URL.
     Raises stripe.error.StripeError on API failures.
@@ -82,17 +135,34 @@ def create_checkout_session(workspace_id, site_id, site_slug):
 
     if billing_customer:
         stripe_customer_id = billing_customer.stripe_customer_id
+        # Ensure the Stripe customer has the correct email/name
+        # (may be missing if created before this fix)
+        try:
+            update_params = {}
+            if customer_email:
+                update_params["email"] = customer_email
+            if customer_name:
+                update_params["name"] = customer_name
+            if update_params:
+                stripe.Customer.modify(stripe_customer_id, **update_params)
+        except stripe.error.InvalidRequestError:
+            pass  # Will be handled by the "No such customer" fallback below
     else:
         stripe_customer_id = None
 
     if not stripe_customer_id:
-        # Create a new Stripe customer
-        customer = stripe.Customer.create(
-            metadata={
+        # Create a new Stripe customer with email + name
+        customer_params = {
+            "metadata": {
                 "workspace_id": str(workspace_id),
                 "site_slug": site_slug,
             }
-        )
+        }
+        if customer_email:
+            customer_params["email"] = customer_email
+        if customer_name:
+            customer_params["name"] = customer_name
+        customer = stripe.Customer.create(**customer_params)
         stripe_customer_id = customer.id
         get_or_create_billing_customer(workspace_id, stripe_customer_id)
 
@@ -100,6 +170,7 @@ def create_checkout_session(workspace_id, site_id, site_slug):
         return stripe.checkout.Session.create(
             mode="subscription",
             customer=customer_id,
+            customer_update={"name": "auto", "address": "auto"},
             line_items=[
                 {"price": setup_price_id, "quantity": 1},   # $191 one-time setup fee
                 {"price": basic_price_id, "quantity": 1},    # $59/mo recurring
@@ -126,12 +197,17 @@ def create_checkout_session(workspace_id, site_id, site_slug):
     except stripe.error.InvalidRequestError as e:
         # Stored customer may be from Test mode or another account (e.g. after switching to Live)
         if "No such customer" in str(e) and billing_customer:
-            customer = stripe.Customer.create(
-                metadata={
+            fallback_params = {
+                "metadata": {
                     "workspace_id": str(workspace_id),
                     "site_slug": site_slug,
                 }
-            )
+            }
+            if customer_email:
+                fallback_params["email"] = customer_email
+            if customer_name:
+                fallback_params["name"] = customer_name
+            customer = stripe.Customer.create(**fallback_params)
             stripe_customer_id = customer.id
             billing_customer.stripe_customer_id = stripe_customer_id
             db.session.commit()
@@ -288,10 +364,17 @@ def _handle_checkout_completed(event):
     # ── Auto-convert prospect to client on first payment ──
     _auto_convert_prospect(workspace_id)
 
+    # ── Send activation email to the client ──
+    site_slug = metadata.get("site_slug", "")
+    _send_activation_email(workspace_id, site_slug)
+
 
 def _auto_convert_prospect(workspace_id):
     """If a prospect is linked to this workspace and not yet converted,
-    mark it as converted now that payment has been received."""
+    mark it as converted now that payment has been received.
+
+    Uses flush() so the caller controls the commit boundary.
+    """
     from app.models.workspace import Workspace
     from app.models.prospect import Prospect
 
@@ -316,7 +399,7 @@ def _auto_convert_prospect(workspace_id):
             "reason": "stripe payment completed",
         },
     ))
-    db.session.commit()
+    db.session.flush()
     logger.info(f"Auto-converted prospect {prospect.id} ({prospect.business_name}) to client")
 
 
