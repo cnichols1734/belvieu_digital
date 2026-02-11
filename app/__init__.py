@@ -144,6 +144,17 @@ def create_app(config_name=None):
             )
         return response
 
+    # --- Custom Jinja filters ---
+    import re
+
+    @app.template_filter("slugify")
+    def slugify_filter(value):
+        """Convert a string to a URL-safe slug: lowercase, only a-z 0-9 and hyphens."""
+        value = (value or "").lower()
+        value = re.sub(r"[^a-z0-9\s-]", "", value)   # strip non-alphanumeric
+        value = re.sub(r"[\s-]+", "-", value)          # collapse whitespace/hyphens
+        return value.strip("-")
+
     # --- Logging ---
     if not app.debug:
         logging.basicConfig(level=logging.INFO)
