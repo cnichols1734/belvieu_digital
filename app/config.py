@@ -33,9 +33,12 @@ class Config:
     # --- Domain search ---
     DOMAIN_PRICE_LIMIT = float(os.environ.get("DOMAIN_PRICE_LIMIT", 25.00))
 
-    # --- Optional / Supabase dual connection ---
+    # --- Supabase ---
     # Pooler URL for runtime, direct URL for migrations (DDL).
     DATABASE_DIRECT_URL = os.environ.get("DATABASE_DIRECT_URL")
+    SUPABASE_URL = os.environ.get("SUPABASE_URL")                # e.g. https://xyz.supabase.co
+    SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY") # service_role key for storage
+    SUPABASE_STORAGE_BUCKET = os.environ.get("SUPABASE_STORAGE_BUCKET", "ticket-attachments")
 
     # --- SQLAlchemy ---
     SQLALCHEMY_TRACK_MODIFICATIONS = False

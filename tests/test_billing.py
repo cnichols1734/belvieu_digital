@@ -25,6 +25,8 @@ class TestBilling:
 
     def _create_client_and_login(self, app, client, seed_data):
         """Create a client user with workspace membership and log in."""
+        from app.models.site import Site
+
         with app.app_context():
             user = User(
                 email="billing-client@test.com",
@@ -40,6 +42,12 @@ class TestBilling:
                 role="owner",
             )
             db.session.add(membership)
+
+            # Set domain choice so checkout guard passes
+            site = Site.query.filter_by(site_slug="test-pizza").first()
+            if site:
+                site.domain_choice = "keep_subdomain"
+
             db.session.commit()
             user_id = user.id
 

@@ -14,7 +14,7 @@
 </div>
 
 <div class="card" style="max-width: 640px;">
-    <form method="POST" action="{{ url_for('portal.ticket_new', site_slug=g.site.site_slug) }}">
+    <form method="POST" action="{{ url_for('portal.ticket_new', site_slug=g.site.site_slug) }}" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <div class="form-group">
@@ -42,10 +42,31 @@
                       rows="6" required>{{ description|default('', true) }}</textarea>
         </div>
 
+        <div class="form-group">
+            <label for="attachments">Attachments</label>
+            <div class="file-upload-zone" id="uploadZone">
+                <input type="file" id="attachments" name="attachments" multiple
+                       accept="image/*,.pdf" class="file-upload-input">
+                <div class="file-upload-content">
+                    <svg class="file-upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"/>
+                    </svg>
+                    <span class="file-upload-text">Drop files here or <strong>browse</strong></span>
+                    <span class="file-upload-hint">Images and PDFs, up to 10 MB each</span>
+                </div>
+                <div class="file-upload-preview" id="filePreview"></div>
+            </div>
+        </div>
+
         <div class="flex items-center gap-1" style="padding-top: 0.5rem;">
             <button type="submit" class="btn btn-primary">Submit ticket</button>
             <a href="{{ url_for('portal.ticket_list', site_slug=g.site.site_slug) }}" class="btn btn-ghost">Cancel</a>
         </div>
     </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/file-upload.js') }}"></script>
+<script>initUploadZone('uploadZone', 'filePreview');</script>
 {% endblock %}
