@@ -3,59 +3,53 @@
 {% block title %}Stripe Health — Belvieu Digital{% endblock %}
 
 {% block content %}
+{% include 'admin/_nav.html' %}
+
 <div class="page-header">
     <div class="page-header-row">
         <div>
             <h1>Stripe Health</h1>
             <p>
-                Real-time integration checks and billing telemetry.
+                Integration checks and billing telemetry.
                 <span class="badge" style="margin-left: 0.5rem;
                     {% if all_ok %}
-                        background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;
+                        background: var(--green-50); color: var(--green-700); border: 1px solid var(--green-100);
                     {% elif has_errors %}
-                        background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;
+                        background: var(--red-50); color: var(--red-700); border: 1px solid var(--red-100);
                     {% else %}
-                        background: #fef3c7; color: #92400e; border: 1px solid #fde68a;
+                        background: var(--yellow-50); color: var(--yellow-700); border: 1px solid var(--yellow-100);
                     {% endif %}
                     font-size: 0.75rem;">
-                    {% if all_ok %}All Checks Passing{% elif has_errors %}Issues Detected{% else %}Warnings{% endif %}
+                    {% if all_ok %}All Passing{% elif has_errors %}Issues Detected{% else %}Warnings{% endif %}
                 </span>
             </p>
         </div>
-        <span class="badge" style="background: {{ '#dcfce7' if key_mode == 'Live' else '#fef3c7' }}; color: {{ '#166534' if key_mode == 'Live' else '#92400e' }}; border: 1px solid {{ '#bbf7d0' if key_mode == 'Live' else '#fde68a' }}; font-size: 0.8rem; padding: 0.35rem 0.75rem;">
+        <span class="badge" style="background: {{ 'var(--green-50)' if key_mode == 'Live' else 'var(--yellow-50)' }}; color: {{ 'var(--green-700)' if key_mode == 'Live' else 'var(--yellow-700)' }}; border: 1px solid {{ 'var(--green-100)' if key_mode == 'Live' else 'var(--yellow-100)' }}; font-size: 0.8rem; padding: 0.35rem 0.75rem;">
             {{ key_mode }} Mode
         </span>
     </div>
 </div>
 
-<!-- Health Checks -->
+{# Health Checks #}
 <div class="card">
-    <div class="card-header">
-        <span>
-            <svg style="width: 16px; height: 16px; vertical-align: -2px; margin-right: 4px;" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-            </svg>
-            Integration Checks
-        </span>
-    </div>
+    <div class="card-header">Integration Checks</div>
 
     {% for check in checks %}
     <div class="admin-detail-row" style="display: flex; align-items: center; gap: 0.75rem;">
-        {# Status icon #}
         {% if check.status == 'ok' %}
-        <span style="color: #16a34a; flex-shrink: 0;" title="OK">
+        <span style="color: var(--green-500); flex-shrink: 0;">
             <svg style="width: 20px; height: 20px;" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
             </svg>
         </span>
         {% elif check.status == 'warn' %}
-        <span style="color: #d97706; flex-shrink: 0;" title="Warning">
+        <span style="color: var(--yellow-500); flex-shrink: 0;">
             <svg style="width: 20px; height: 20px;" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
             </svg>
         </span>
         {% else %}
-        <span style="color: #dc2626; flex-shrink: 0;" title="Error">
+        <span style="color: var(--red-500); flex-shrink: 0;">
             <svg style="width: 20px; height: 20px;" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
             </svg>
@@ -69,54 +63,47 @@
     {% endfor %}
 </div>
 
-<!-- Subscription Summary -->
-<div class="stats-grid" style="margin-top: 1.5rem;">
+{# Subscription Summary #}
+<div class="stats-grid mt-3">
     <div class="stat-card">
         <div class="stat-label">Active</div>
-        <div class="stat-value" style="color: #16a34a;">{{ sub_summary.active }}</div>
+        <div class="stat-value" style="color: var(--green-600);">{{ sub_summary.active }}</div>
         <div class="stat-detail">Healthy subscriptions</div>
     </div>
     <div class="stat-card">
         <div class="stat-label">Cancelling</div>
-        <div class="stat-value" style="color: #d97706;">{{ sub_summary.cancelling }}</div>
+        <div class="stat-value" style="color: var(--yellow-500);">{{ sub_summary.cancelling }}</div>
         <div class="stat-detail">Ending at period close</div>
     </div>
     <div class="stat-card">
         <div class="stat-label">Past Due</div>
-        <div class="stat-value" style="color: #dc2626;">{{ sub_summary.past_due }}</div>
+        <div class="stat-value" style="color: var(--red-500);">{{ sub_summary.past_due }}</div>
         <div class="stat-detail">Payment failed</div>
     </div>
     <div class="stat-card">
         <div class="stat-label">Canceled</div>
-        <div class="stat-value" style="color: #737373;">{{ sub_summary.canceled }}</div>
+        <div class="stat-value" style="color: var(--gray-400);">{{ sub_summary.canceled }}</div>
         <div class="stat-detail">No longer subscribed</div>
     </div>
 </div>
 
-<div class="content-grid" style="margin-top: 1.5rem;">
-    <!-- Recent Webhook Events -->
+<div class="content-grid mt-3">
+    {# Recent Webhook Events #}
     <div class="card">
-        <div class="card-header">
-            <span>
-                <svg style="width: 16px; height: 16px; vertical-align: -2px; margin-right: 4px;" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/>
-                </svg>
-                Recent Webhooks
-            </span>
-        </div>
+        <div class="card-header">Recent Webhooks</div>
         {% if recent_events %}
         <div class="admin-activity-feed">
             {% for evt in recent_events %}
             <div class="admin-activity-item">
                 <div class="admin-activity-action">
-                    <span class="badge" style="font-size: 0.7rem; background: var(--color-bg-subtle, #f5f5f5); color: var(--color-text-secondary, #666); border: 1px solid var(--color-border, #e5e5e5);">
+                    <span class="badge" style="font-size: 0.7rem; background: var(--gray-50); color: var(--color-text-secondary); border: 1px solid var(--color-border);">
                         {{ evt.event_type }}
                     </span>
                 </div>
                 <div class="admin-activity-meta">
-                    <span class="text-muted text-sm" style="font-family: monospace; font-size: 0.7rem;">{{ evt.stripe_event_id[:20] }}...</span>
-                    <span class="text-tertiary">·</span>
-                    <span class="text-tertiary">{{ evt.processed_at.strftime('%b %d, %Y %H:%M') if evt.processed_at else '' }}</span>
+                    <span class="text-muted text-sm font-mono" style="font-size: 0.7rem;">{{ evt.stripe_event_id[:20] }}...</span>
+                    <span class="text-tertiary">&middot;</span>
+                    <span class="text-tertiary">{{ evt.processed_at.strftime('%b %d, %H:%M') if evt.processed_at else '' }}</span>
                 </div>
             </div>
             {% endfor %}
@@ -124,22 +111,13 @@
         {% else %}
         <div class="empty-state">
             <p>No webhook events recorded yet.</p>
-            <p class="text-sm text-muted">Events will appear here once Stripe sends webhooks to your endpoint.</p>
         </div>
         {% endif %}
     </div>
 
-    <!-- Recent Billing Audit Events -->
+    {# Recent Billing Audit Events #}
     <div class="card">
-        <div class="card-header">
-            <span>
-                <svg style="width: 16px; height: 16px; vertical-align: -2px; margin-right: 4px;" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
-                    <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
-                </svg>
-                Recent Billing Activity
-            </span>
-        </div>
+        <div class="card-header">Recent Billing Activity</div>
         {% if recent_billing_audits %}
         <div class="admin-activity-feed">
             {% for event in recent_billing_audits %}
@@ -148,7 +126,7 @@
                     <span class="badge badge-{{ event.action.split('.')[0] }}">{{ event.action }}</span>
                 </div>
                 <div class="admin-activity-meta">
-                    <span class="text-tertiary">{{ event.created_at.strftime('%b %d, %Y %H:%M') if event.created_at else '' }}</span>
+                    <span class="text-tertiary">{{ event.created_at.strftime('%b %d, %H:%M') if event.created_at else '' }}</span>
                 </div>
             </div>
             {% endfor %}
@@ -159,11 +137,5 @@
         </div>
         {% endif %}
     </div>
-</div>
-
-<div style="margin-top: 1.5rem; text-align: center;">
-    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
-        &larr; Back to Dashboard
-    </a>
 </div>
 {% endblock %}

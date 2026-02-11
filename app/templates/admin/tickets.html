@@ -3,16 +3,14 @@
 {% block title %}All Tickets — Belvieu Digital{% endblock %}
 
 {% block content %}
+{% include 'admin/_nav.html' %}
+
 <div class="page-header">
-    <div class="page-header-row">
-        <div>
-            <h1>All Tickets</h1>
-            <p>Support tickets across all workspaces.</p>
-        </div>
-    </div>
+    <h1>Tickets</h1>
+    <p>Support tickets across all workspaces.</p>
 </div>
 
-<!-- Filters -->
+{# Filters #}
 <div class="admin-ticket-filters">
     <div class="ticket-filters">
         <a href="{{ url_for('admin.ticket_list') }}"

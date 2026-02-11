@@ -3,12 +3,19 @@
 {% block title %}Admin Dashboard — Belvieu Digital{% endblock %}
 
 {% block content %}
+{% include 'admin/_nav.html' %}
+
 <div class="page-header">
-    <h1>Admin Dashboard</h1>
-    <p>Pipeline overview, revenue, and operations at a glance.</p>
+    <div class="page-header-row">
+        <div>
+            <h1>Dashboard</h1>
+            <p>Pipeline, revenue, and operations at a glance.</p>
+        </div>
+        <a href="{{ url_for('admin.prospect_new') }}" class="btn btn-primary">+ Add Prospect</a>
+    </div>
 </div>
 
-<!-- Stats Grid -->
+{# ── Stats ── #}
 <div class="stats-grid">
     <div class="stat-card">
         <div class="stat-label">Pipeline</div>
@@ -18,40 +25,37 @@
     <div class="stat-card">
         <div class="stat-label">Monthly Revenue</div>
         <div class="stat-value">${{ mrr }}</div>
-        <div class="stat-detail">
-            {{ active_count }} active subscriber{{ 's' if active_count != 1 else '' }}
-        </div>
+        <div class="stat-detail">{{ active_count }} active subscriber{{ 's' if active_count != 1 else '' }}</div>
     </div>
     <div class="stat-card">
         <div class="stat-label">Open Tickets</div>
         <div class="stat-value">{{ open_tickets_count }}</div>
-        <div class="stat-detail"><a href="{{ url_for('admin.ticket_list') }}">View all</a></div>
+        <div class="stat-detail"><a href="{{ url_for('admin.ticket_list', status='open') }}">View open tickets</a></div>
     </div>
     <div class="stat-card">
         <div class="stat-label">Conversion Rate</div>
         <div class="stat-value">{{ conversion_rate }}%</div>
-        <div class="stat-detail">Pitched &rarr; Converted</div>
+        <div class="stat-detail">Pitched to converted</div>
     </div>
 </div>
 
-<!-- Content Grid -->
+{# ── Main Content: Pipeline + Attention ── #}
 <div class="content-grid">
-    <!-- Pipeline Breakdown with Visual Bar -->
+    {# Left: Pipeline Breakdown #}
     <div class="card">
         <div class="card-header">
             <span>Prospect Pipeline</span>
-            <a href="{{ url_for('admin.prospect_list') }}" class="btn btn-sm btn-secondary">View all</a>
+            <a href="{{ url_for('admin.prospect_list') }}" class="btn btn-sm btn-ghost">View all</a>
         </div>
 
-        {# Pipeline visualization bar #}
         {% if total_prospects > 0 %}
-        <div style="display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 1rem; background: var(--color-bg-subtle, #f5f5f5);">
+        <div style="display: flex; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 1.25rem; background: var(--gray-100);">
             {% set stages = [
-                ('researching', pipeline_counts.get('researching', 0), '#737373'),
-                ('site_built', pipeline_counts.get('site_built', 0), '#3b82f6'),
-                ('pitched', pipeline_counts.get('pitched', 0), '#f59e0b'),
-                ('converted', pipeline_counts.get('converted', 0), '#22c55e'),
-                ('declined', pipeline_counts.get('declined', 0), '#ef4444')
+                ('researching', pipeline_counts.get('researching', 0), 'var(--gray-400)'),
+                ('site_built', pipeline_counts.get('site_built', 0), 'var(--blue-500)'),
+                ('pitched', pipeline_counts.get('pitched', 0), 'var(--yellow-500)'),
+                ('converted', pipeline_counts.get('converted', 0), 'var(--green-500)'),
+                ('declined', pipeline_counts.get('declined', 0), 'var(--red-500)')
             ] %}
             {% for name, count, color in stages %}
                 {% if count > 0 %}
@@ -64,7 +68,7 @@
         <div class="admin-pipeline-list">
             {% for status in ['researching', 'site_built', 'pitched', 'converted', 'declined'] %}
             <a href="{{ url_for('admin.prospect_list', status=status) }}" class="admin-pipeline-row">
-                <span class="admin-pipeline-label">
+                <span>
                     <span class="badge badge-{{ status }}">
                         <span class="badge-dot"></span>
                         {{ status | replace('_', ' ') | title }}
@@ -76,99 +80,90 @@
         </div>
     </div>
 
-    <!-- Quick Actions & Revenue & Pending -->
-    <div class="card">
-        <div class="card-header">Quick Actions</div>
-        <div class="admin-actions-list">
-            <a href="{{ url_for('admin.prospect_new') }}" class="btn btn-primary btn-full mb-1">
-                + Add New Prospect
-            </a>
-            <a href="{{ url_for('admin.workspace_list') }}" class="btn btn-secondary btn-full mb-1">
-                Manage Workspaces
-            </a>
-            <a href="{{ url_for('admin.ticket_list') }}" class="btn btn-secondary btn-full mb-1">
-                View All Tickets
-            </a>
-            <a href="{{ url_for('admin.stripe_health') }}" class="btn btn-secondary btn-full">
-                Stripe Health
-            </a>
-        </div>
+    {# Right: Attention + Status #}
+    <div>
+        {# At-Risk + Cancelling — things that genuinely need action #}
+        {% if at_risk_data or cancelling_data %}
+        <div class="card mb-2">
+            <div class="card-header">Needs Attention</div>
 
-        {# MRR #}
+            {% if at_risk_data %}
+            <div class="attention-section">
+                <div class="attention-label">
+                    <svg style="width: 14px; height: 14px; color: var(--red-500);" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                    Past Due <span class="count">{{ at_risk_data|length }}</span>
+                </div>
+                {% for item in at_risk_data %}
+                <div class="attention-item">
+                    <a href="{{ url_for('admin.workspace_detail', workspace_id=item.workspace.id) }}">{{ item.workspace.name }}</a>
+                    <span class="text-muted text-sm">{{ item.subscription.plan|capitalize if item.subscription.plan else '' }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if cancelling_data %}
+            <div class="attention-section">
+                <div class="attention-label">
+                    <svg style="width: 14px; height: 14px; color: var(--yellow-500);" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                    </svg>
+                    Cancelling <span class="count">{{ cancelling_data|length }}</span>
+                </div>
+                {% for item in cancelling_data %}
+                <div class="attention-item">
+                    <a href="{{ url_for('admin.workspace_detail', workspace_id=item.workspace.id) }}">{{ item.workspace.name }}</a>
+                    <span class="text-muted text-sm">Ends {{ item.subscription.current_period_end.strftime('%b %d') if item.subscription.current_period_end else '?' }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {# Pending Invites — awareness, not urgency #}
+        {% if pending_invites_data %}
+        <div class="card mb-2">
+            <div class="card-header">Awaiting Signup</div>
+            {% for inv in pending_invites_data %}
+            <div class="attention-item">
+                <div>
+                    <a href="{{ url_for('admin.workspace_detail', workspace_id=inv.workspace_id, tab='invites') }}">{{ inv.workspace.name }}</a>
+                    {% if inv.email %}<span class="text-muted text-sm"> to {{ inv.email }}</span>{% endif %}
+                </div>
+                <span class="text-sm {% if inv.days_ago >= 21 %}text-warning{% else %}text-muted{% endif %}">
+                    {% if inv.days_ago == 0 %}Sent today
+                    {% elif inv.days_ago == 1 %}Sent yesterday
+                    {% else %}Sent {{ inv.days_ago }}d ago{% endif %}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {# MRR Summary #}
         {% if active_count > 0 %}
-        <hr class="divider">
-        <div style="font-size: 0.85rem;">
+        <div class="card">
+            <div class="card-header">Revenue</div>
             <div class="admin-detail-row">
-                <span class="text-muted">{{ active_count }} active subscriber{{ 's' if active_count != 1 else '' }} @ $59/mo</span>
-                <span class="font-semibold">${{ mrr }}/mo MRR</span>
+                <span class="admin-detail-label">MRR</span>
+                <span class="font-semibold">${{ mrr }}/mo</span>
+            </div>
+            <div class="admin-detail-row">
+                <span class="admin-detail-label">Subscribers</span>
+                <span>{{ active_count }} active</span>
             </div>
         </div>
         {% endif %}
-
-        {% if pending_invites > 0 %}
-        <hr class="divider">
-        <div class="admin-pending-stat">
-            <span class="text-muted">Pending invites:</span>
-            <span class="font-semibold">{{ pending_invites }}</span>
-        </div>
-        {% endif %}
     </div>
 </div>
 
-{# ── At-Risk Clients ── #}
-{% if at_risk_data %}
-<div class="card mt-2" style="border-color: var(--yellow-200, #fde68a);">
-    <div class="card-header">
-        <span style="color: var(--yellow-700, #a16207);">
-            <svg style="width: 16px; height: 16px; vertical-align: -2px; margin-right: 4px;" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-            </svg>
-            At-Risk Clients ({{ at_risk_data|length }})
-        </span>
-    </div>
-    <p class="text-sm text-muted" style="margin-bottom: 0.75rem;">These clients have past-due payments and may churn.</p>
-    {% for item in at_risk_data %}
-    <div class="admin-detail-row">
-        <div>
-            <a href="{{ url_for('admin.workspace_detail', workspace_id=item.workspace.id) }}" class="font-medium">{{ item.workspace.name }}</a>
-            <span class="badge badge-past_due" style="margin-left: 0.5rem;"><span class="badge-dot"></span> Past Due</span>
-        </div>
-        <span class="text-muted text-sm">{{ item.subscription.plan|capitalize if item.subscription.plan else '' }}</span>
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
-
-{# ── Cancelling Soon ── #}
-{% if cancelling_data %}
-<div class="card mt-2" style="border-color: #fde68a;">
-    <div class="card-header">
-        <span style="color: #a16207;">
-            <svg style="width: 16px; height: 16px; vertical-align: -2px; margin-right: 4px;" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
-            </svg>
-            Cancelling Soon ({{ cancelling_data|length }})
-        </span>
-    </div>
-    <p class="text-sm text-muted" style="margin-bottom: 0.75rem;">These clients have cancelled but still have access until their period ends.</p>
-    {% for item in cancelling_data %}
-    <div class="admin-detail-row">
-        <div>
-            <a href="{{ url_for('admin.workspace_detail', workspace_id=item.workspace.id) }}" class="font-medium">{{ item.workspace.name }}</a>
-            <span class="badge" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; margin-left: 0.5rem; font-size: 0.75rem;">Cancelling</span>
-        </div>
-        <span class="text-muted text-sm">
-            Ends {{ item.subscription.current_period_end.strftime('%b %d, %Y') if item.subscription.current_period_end else '—' }}
-        </span>
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
-
-<!-- Recent Activity -->
+{# ── Recent Activity ── #}
+{% if recent_activity %}
 <div class="card mt-3">
     <div class="card-header">Recent Activity</div>
-    {% if recent_activity %}
     <div class="admin-activity-feed">
         {% for event in recent_activity %}
         <div class="admin-activity-item">
@@ -181,16 +176,12 @@
                 {% else %}
                     <span class="text-muted">System</span>
                 {% endif %}
-                <span class="text-tertiary">·</span>
-                <span class="text-tertiary">{{ event.created_at.strftime('%b %d, %Y %H:%M') if event.created_at else '' }}</span>
+                <span class="text-tertiary">&middot;</span>
+                <span class="text-tertiary">{{ event.created_at.strftime('%b %d, %H:%M') if event.created_at else '' }}</span>
             </div>
         </div>
         {% endfor %}
     </div>
-    {% else %}
-    <div class="empty-state">
-        <p>No activity yet.</p>
-    </div>
-    {% endif %}
 </div>
+{% endif %}
 {% endblock %}

@@ -3,12 +3,23 @@
 {% block title %}Convert {{ prospect.business_name }} — Belvieu Digital{% endblock %}
 
 {% block content %}
+{% include 'admin/_nav.html' %}
+
+{# Breadcrumb #}
+<div class="breadcrumb">
+    <a href="{{ url_for('admin.prospect_list') }}">Prospects</a>
+    <span class="breadcrumb-sep">/</span>
+    <a href="{{ url_for('admin.prospect_detail', prospect_id=prospect.id) }}">{{ prospect.business_name }}</a>
+    <span class="breadcrumb-sep">/</span>
+    <span>Convert</span>
+</div>
+
 <div class="page-header">
     <h1>Convert to Client</h1>
     <p>Create a workspace, site, and invite for <strong>{{ prospect.business_name }}</strong>.</p>
 </div>
 
-<div class="card" style="max-width: 640px;">
+<div class="card" style="max-width: 720px;">
     <form method="POST" action="{{ url_for('admin.prospect_convert', prospect_id=prospect.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -17,8 +28,7 @@
                 <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
             </svg>
             <div>
-                This will create a workspace, site, and invite token from the prospect record.
-                The invite link will be shown on the next page for you to send to the client.
+                This will create a workspace, site, and invite token. The invite link will be shown on the next page.
             </div>
         </div>
 
@@ -50,7 +60,7 @@
             <input type="text" id="custom_domain" name="custom_domain" class="form-control"
                    value="{{ form_data.get('custom_domain', '') }}"
                    placeholder="e.g. mariospizza.com">
-            <div class="form-hint">Optional — we register one (up to $25/yr) or client provides their own. Set here once DNS is pointed.</div>
+            <div class="form-hint">Optional. Set here once DNS is pointed.</div>
         </div>
 
         <hr class="divider">
@@ -60,7 +70,7 @@
             <input type="email" id="invite_email" name="invite_email" class="form-control"
                    value="{{ form_data.get('invite_email', prospect.contact_email or '') }}"
                    placeholder="e.g. mario@example.com">
-            <div class="form-hint">Optional — if set, only this email can use the invite link</div>
+            <div class="form-hint">Optional. If set, only this email can use the invite link.</div>
         </div>
 
         <div class="flex gap-1">

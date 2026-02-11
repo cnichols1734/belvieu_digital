@@ -1,0 +1,14 @@
+{# Admin sub-navigation — included at the top of every admin page #}
+{% set ep = request.endpoint or '' %}
+<nav class="admin-subnav">
+    <a href="{{ url_for('admin.dashboard') }}"
+       class="admin-subnav-link {% if ep == 'admin.dashboard' %}active{% endif %}">Dashboard</a>
+    <a href="{{ url_for('admin.prospect_list') }}"
+       class="admin-subnav-link {% if 'prospect' in ep and 'workspace_prospect' not in ep %}active{% endif %}">Prospects</a>
+    <a href="{{ url_for('admin.workspace_list') }}"
+       class="admin-subnav-link {% if 'workspace' in ep or 'site_status' in ep or 'invite' in ep %}active{% endif %}">Workspaces</a>
+    <a href="{{ url_for('admin.ticket_list') }}"
+       class="admin-subnav-link {% if 'ticket' in ep %}active{% endif %}">Tickets</a>
+    <a href="{{ url_for('admin.stripe_health') }}"
+       class="admin-subnav-link {% if 'stripe' in ep %}active{% endif %}">Stripe</a>
+</nav>
