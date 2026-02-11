@@ -1920,6 +1920,7 @@ select.form-control {
 /* ─── Utility ─── */
 .text-muted     { color: var(--color-text-secondary); }
 .text-tertiary  { color: var(--color-text-tertiary); }
+.text-warning   { color: var(--yellow-700); }
 .text-sm        { font-size: 12px; }
 .text-xs        { font-size: 11px; }
 .font-medium    { font-weight: 500; }

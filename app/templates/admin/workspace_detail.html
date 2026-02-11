@@ -32,10 +32,12 @@
                 <span class="text-muted" style="margin-left: 0.5rem;">Created {{ workspace.created_at.strftime('%b %d, %Y') if workspace.created_at else '' }}</span>
             </p>
         </div>
-        {% if site and site.published_url %}
-        <a href="{{ site.published_url }}" target="_blank" class="btn btn-secondary">
-            View Live Site
-        </a>
+        {% if site %}
+            {% if site.custom_domain %}
+            <a href="{{ site.custom_domain if site.custom_domain.startswith('http') else 'https://' ~ site.custom_domain }}" target="_blank" class="btn btn-secondary">View Custom Site</a>
+            {% elif site.published_url %}
+            <a href="{{ site.published_url }}" target="_blank" class="btn btn-secondary">View Demo Site</a>
+            {% endif %}
         {% endif %}
     </div>
 </div>
@@ -92,7 +94,7 @@
                 <div class="admin-detail-row">
                     <span class="admin-detail-label">Custom Domain</span>
                     {% if site.custom_domain %}
-                        <span>{{ site.custom_domain }}</span>
+                        <a href="{{ site.custom_domain if site.custom_domain.startswith('http') else 'https://' ~ site.custom_domain }}" target="_blank">{{ site.custom_domain }}</a>
                     {% else %}
                         <button class="btn btn-sm btn-ghost" onclick="switchTab('site')" style="padding: 0; color: var(--color-primary);">+ Add domain</button>
                     {% endif %}

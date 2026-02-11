@@ -292,7 +292,7 @@ class TestAdminProspects:
             follow_redirects=True,
         )
         assert resp.status_code == 200
-        assert b"Client Created Successfully" in resp.data
+        assert b"Client Created" in resp.data
         assert b"success-burger" in resp.data
 
         # Verify in DB

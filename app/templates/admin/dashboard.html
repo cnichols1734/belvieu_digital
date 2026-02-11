@@ -82,8 +82,8 @@
 
     {# Right: Attention + Status #}
     <div>
-        {# At-Risk + Cancelling combined #}
-        {% if at_risk_data or cancelling_data or pending_invites > 0 %}
+        {# At-Risk + Cancelling — things that genuinely need action #}
+        {% if at_risk_data or cancelling_data %}
         <div class="card mb-2">
             <div class="card-header">Needs Attention</div>
 
@@ -120,15 +120,26 @@
                 {% endfor %}
             </div>
             {% endif %}
+        </div>
+        {% endif %}
 
-            {% if pending_invites > 0 %}
-            <div class="attention-section">
-                <div class="attention-label">
-                    Pending Invites <span class="count">{{ pending_invites }}</span>
+        {# Pending Invites — awareness, not urgency #}
+        {% if pending_invites_data %}
+        <div class="card mb-2">
+            <div class="card-header">Awaiting Signup</div>
+            {% for inv in pending_invites_data %}
+            <div class="attention-item">
+                <div>
+                    <a href="{{ url_for('admin.workspace_detail', workspace_id=inv.workspace_id, tab='invites') }}">{{ inv.workspace.name }}</a>
+                    {% if inv.email %}<span class="text-muted text-sm"> to {{ inv.email }}</span>{% endif %}
                 </div>
-                <p class="text-sm text-muted">{{ pending_invites }} invite{{ 's' if pending_invites != 1 else '' }} waiting to be accepted.</p>
+                <span class="text-sm {% if inv.days_ago >= 21 %}text-warning{% else %}text-muted{% endif %}">
+                    {% if inv.days_ago == 0 %}Sent today
+                    {% elif inv.days_ago == 1 %}Sent yesterday
+                    {% else %}Sent {{ inv.days_ago }}d ago{% endif %}
+                </span>
             </div>
-            {% endif %}
+            {% endfor %}
         </div>
         {% endif %}
 

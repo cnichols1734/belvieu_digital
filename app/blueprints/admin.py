@@ -105,13 +105,34 @@ def dashboard():
         Ticket.status.in_(["open", "in_progress", "waiting_on_client"])
     ).count()
 
-    # --- Pending invites ---
+    # --- Pending invites (with workspace data for dashboard links) ---
     from datetime import datetime, timezone
 
-    pending_invites = WorkspaceInvite.query.filter(
-        WorkspaceInvite.used_at.is_(None),
-        WorkspaceInvite.expires_at > datetime.now(timezone.utc),
-    ).count()
+    pending_invite_records = (
+        WorkspaceInvite.query
+        .filter(
+            WorkspaceInvite.used_at.is_(None),
+            WorkspaceInvite.expires_at > datetime.now(timezone.utc),
+        )
+        .order_by(WorkspaceInvite.created_at.desc())
+        .all()
+    )
+    # Deduplicate to one invite per workspace (show the most recent)
+    # Attach days_ago for template display
+    now_utc = datetime.now(timezone.utc)
+    seen_ws = set()
+    pending_invites_data = []
+    for inv in pending_invite_records:
+        if inv.workspace_id not in seen_ws:
+            seen_ws.add(inv.workspace_id)
+            if inv.created_at:
+                created = inv.created_at
+                if created.tzinfo is None:
+                    created = created.replace(tzinfo=timezone.utc)
+                inv.days_ago = (now_utc - created).days
+            else:
+                inv.days_ago = 0
+            pending_invites_data.append(inv)
 
     # --- Recent activity ---
     recent_activity = (
@@ -131,7 +152,7 @@ def dashboard():
         at_risk_data=at_risk_data,
         cancelling_data=cancelling_data,
         open_tickets_count=open_tickets_count,
-        pending_invites=pending_invites,
+        pending_invites_data=pending_invites_data,
         recent_activity=recent_activity,
     )
 
