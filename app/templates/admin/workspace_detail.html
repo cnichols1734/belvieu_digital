@@ -55,6 +55,12 @@
             <span class="admin-tab-badge">{{ pending_count }}</span>
         {% endif %}
     </button>
+    <button class="admin-tab {{ 'active' if active_tab == 'contact_form' }}" onclick="switchTab('contact_form')">
+        Contact Form
+        {% if contact_form_config and contact_form_config.is_enabled %}
+            <span class="admin-tab-badge" style="background: var(--green-500);">On</span>
+        {% endif %}
+    </button>
 </div>
 
 {# ═══════════════════════════════════════════════
@@ -765,6 +771,205 @@
         </div>
     </div>
 </div>
+
+{# ═══════════════════════════════════════════════
+   TAB 6: CONTACT FORM RELAY
+   ═══════════════════════════════════════════════ #}
+<div class="admin-tab-panel {{ 'active' if active_tab == 'contact_form' }}" id="tab-contact_form">
+    <div style="max-width: 800px;">
+        {% if not site %}
+        <div class="card">
+            <div class="card-header">Contact Form Relay</div>
+            <p class="text-muted text-sm">No site exists for this workspace. Create a site first to enable the contact form relay.</p>
+        </div>
+        {% elif not contact_form_config %}
+        {# ── No config yet — setup card ── #}
+        <div class="card">
+            <div class="card-header">Enable Contact Form Relay</div>
+            <p class="text-sm text-muted" style="margin-bottom: 0.75rem;">
+                Set up a contact form relay for this client's website. When a visitor submits the
+                contact form, their message will be forwarded directly to the recipient email(s) below.
+            </p>
+            <form method="POST" action="{{ url_for('admin.contact_form_upsert', workspace_id=workspace.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label for="recipient_emails">Recipient Email(s)</label>
+                    <input type="text" id="recipient_emails" name="recipient_emails" class="form-control"
+                           placeholder="e.g. owner@business.com, manager@business.com"
+                           {% if prospect and prospect.contact_email %}value="{{ prospect.contact_email }}"{% endif %}
+                           required>
+                    <div class="form-hint">Comma-separated list of emails that will receive contact form submissions.</div>
+                </div>
+                <button type="submit" class="btn btn-primary">Generate Access Key</button>
+            </form>
+        </div>
+        {% else %}
+        {# ── Config exists — management cards ── #}
+
+        {# Status & Toggle #}
+        <div class="card mb-2">
+            <div class="card-header">
+                <span>Contact Form Relay</span>
+                {% if contact_form_config.is_enabled %}
+                    <span class="badge badge-active"><span class="badge-dot"></span> Enabled</span>
+                {% else %}
+                    <span class="badge badge-canceled"><span class="badge-dot"></span> Disabled</span>
+                {% endif %}
+            </div>
+            <p class="text-sm text-muted" style="margin-bottom: 0.75rem;">
+                {% if contact_form_config.is_enabled %}
+                    The contact form relay is active. Submissions from the client's website will be forwarded to the configured recipient(s).
+                {% else %}
+                    The contact form relay is disabled. Form submissions will be rejected until re-enabled.
+                {% endif %}
+            </p>
+            <form method="POST" action="{{ url_for('admin.contact_form_toggle', workspace_id=workspace.id) }}" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% if contact_form_config.is_enabled %}
+                    <button type="submit" class="btn btn-sm btn-secondary">Disable Form Relay</button>
+                {% else %}
+                    <button type="submit" class="btn btn-sm btn-primary">Enable Form Relay</button>
+                {% endif %}
+            </form>
+        </div>
+
+        {# Recipients #}
+        <div class="card mb-2">
+            <div class="card-header">Recipients</div>
+            <div class="admin-detail-row" style="margin-bottom: 0.75rem;">
+                <span class="admin-detail-label">Current</span>
+                <span class="text-sm">{{ contact_form_config.recipient_emails }}</span>
+            </div>
+            <form method="POST" action="{{ url_for('admin.contact_form_upsert', workspace_id=workspace.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label for="recipient_emails_update">Update Recipient Email(s)</label>
+                    <input type="text" id="recipient_emails_update" name="recipient_emails" class="form-control"
+                           value="{{ contact_form_config.recipient_emails }}" required>
+                    <div class="form-hint">Comma-separated list. Changes take effect immediately.</div>
+                </div>
+                <button type="submit" class="btn btn-sm btn-primary">Update Recipients</button>
+            </form>
+        </div>
+
+        {# Embed Code #}
+        <div class="card mb-2">
+            <div class="card-header">
+                <span>Embed Code</span>
+                <button class="btn btn-sm btn-secondary" onclick="copyEmbedCode()">Copy to Clipboard</button>
+            </div>
+            <p class="text-sm text-muted" style="margin-bottom: 0.75rem;">
+                Add this HTML + JS to the client's website contact page. The form submits in the background and shows a toast notification &mdash; no page redirect.
+            </p>
+            <div style="position: relative;">
+                <pre id="embed-code-block" style="background: var(--gray-50); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 1rem; font-size: 13px; line-height: 1.6; overflow-x: auto; white-space: pre; color: var(--color-text-primary);"><code>&lt;form id="bd-contact-form"&gt;
+  &lt;input type="hidden" name="access_key" value="{{ contact_form_config.access_key }}"&gt;
+
+  &lt;label for="name"&gt;Name&lt;/label&gt;
+  &lt;input type="text" name="name" id="name" required&gt;
+
+  &lt;label for="email"&gt;Email&lt;/label&gt;
+  &lt;input type="email" name="email" id="email" required&gt;
+
+  &lt;label for="phone"&gt;Phone&lt;/label&gt;
+  &lt;input type="tel" name="phone" id="phone"&gt;
+
+  &lt;label for="message"&gt;Message&lt;/label&gt;
+  &lt;textarea name="message" id="message" required&gt;&lt;/textarea&gt;
+
+  &lt;button type="submit"&gt;Send Message&lt;/button&gt;
+&lt;/form&gt;
+
+&lt;div id="bd-form-toast" style="display:none;position:fixed;top:1.5rem;right:1.5rem;padding:1rem 1.5rem;border-radius:8px;font-size:15px;font-weight:500;z-index:9999;transition:opacity .4s;box-shadow:0 4px 12px rgba(0,0,0,.15);"&gt;&lt;/div&gt;
+
+&lt;script&gt;
+(function() {
+  var form = document.getElementById('bd-contact-form');
+  var toast = document.getElementById('bd-form-toast');
+
+  function showToast(msg, success) {
+    toast.textContent = msg;
+    toast.style.background = success ? '#dcfce7' : '#fee2e2';
+    toast.style.color = success ? '#166534' : '#991b1b';
+    toast.style.border = '1px solid ' + (success ? '#bbf7d0' : '#fecaca');
+    toast.style.opacity = '1';
+    toast.style.display = 'block';
+    setTimeout(function() {
+      toast.style.opacity = '0';
+      setTimeout(function() { toast.style.display = 'none'; }, 400);
+    }, 5000);
+  }
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    var btn = form.querySelector('button[type="submit"]');
+    var originalText = btn.textContent;
+    btn.textContent = 'Sending...';
+    btn.disabled = true;
+
+    fetch('{{ app_base_url }}/api/forms/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.fromEntries(new FormData(form)))
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        showToast('Message sent! We will be in touch soon.', true);
+        form.reset();
+      } else {
+        showToast(data.error || 'Something went wrong. Please try again.', false);
+      }
+    })
+    .catch(function() {
+      showToast('Network error. Please check your connection and try again.', false);
+    })
+    .finally(function() {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    });
+  });
+})();
+&lt;/script&gt;</code></pre>
+            </div>
+            <div class="form-hint" style="margin-top: 0.5rem;">
+                Style the form and toast however you'd like &mdash; only the <code>access_key</code>, field <code>name</code> attributes, and the <code>fetch</code> URL matter.
+            </div>
+        </div>
+
+        {# Regenerate Access Key #}
+        <div class="card">
+            <div class="card-header">
+                <span>Access Key</span>
+            </div>
+            <div class="admin-detail-row" style="margin-bottom: 0.75rem;">
+                <span class="admin-detail-label">Current Key</span>
+                <span class="font-mono text-sm" style="word-break: break-all;">{{ contact_form_config.access_key[:12] }}...{{ contact_form_config.access_key[-8:] }}</span>
+            </div>
+            <div class="admin-detail-row" style="margin-bottom: 0.75rem;">
+                <span class="admin-detail-label">Created</span>
+                <span class="text-sm">{{ contact_form_config.created_at.strftime('%b %d, %Y at %I:%M %p') if contact_form_config.created_at else '—' }}</span>
+            </div>
+            {% if contact_form_config.updated_at and contact_form_config.updated_at != contact_form_config.created_at %}
+            <div class="admin-detail-row" style="margin-bottom: 0.75rem;">
+                <span class="admin-detail-label">Last Updated</span>
+                <span class="text-sm">{{ contact_form_config.updated_at.strftime('%b %d, %Y at %I:%M %p') }}</span>
+            </div>
+            {% endif %}
+            <hr class="divider">
+            <p class="text-sm text-muted" style="margin-bottom: 0.75rem;">
+                Regenerating the access key will <strong>immediately invalidate</strong> the current key.
+                You will need to update the embed code on the client's website.
+            </p>
+            <form method="POST" action="{{ url_for('admin.contact_form_regenerate', workspace_id=workspace.id) }}"
+                  onsubmit="return confirm('Are you sure you want to regenerate the access key?\n\nThe current key will stop working immediately. You will need to update the HTML embed code on the client\'s website with the new key.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-danger">Regenerate Access Key</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -790,6 +995,58 @@ function switchTab(tabName) {
 function toggleBusinessEdit(show) {
     document.getElementById('business-view').style.display = show ? 'none' : 'block';
     document.getElementById('business-edit').style.display = show ? 'block' : 'none';
+}
+
+function copyEmbedCode() {
+    var codeBlock = document.getElementById('embed-code-block');
+    if (!codeBlock) return;
+
+    // Get the text content (decoded HTML entities)
+    var text = codeBlock.textContent || codeBlock.innerText;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+            showCopyFeedback('Embed code copied to clipboard!');
+        }).catch(function() {
+            fallbackCopy(text);
+        });
+    } else {
+        fallbackCopy(text);
+    }
+}
+
+function fallbackCopy(text) {
+    var textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+        document.execCommand('copy');
+        showCopyFeedback('Embed code copied to clipboard!');
+    } catch (e) {
+        showCopyFeedback('Failed to copy. Please select and copy manually.', true);
+    }
+    document.body.removeChild(textarea);
+}
+
+function showCopyFeedback(message, isError) {
+    // Reuse the flash message pattern from the app
+    var existing = document.querySelector('.copy-toast');
+    if (existing) existing.remove();
+
+    var toast = document.createElement('div');
+    toast.className = 'copy-toast';
+    toast.style.cssText = 'position:fixed;top:1rem;right:1rem;padding:0.75rem 1.25rem;border-radius:6px;font-size:14px;font-weight:500;z-index:9999;transition:opacity 0.3s;' +
+        (isError ? 'background:#fee2e2;color:#991b1b;border:1px solid #fecaca;' : 'background:#dcfce7;color:#166534;border:1px solid #bbf7d0;');
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    setTimeout(function() {
+        toast.style.opacity = '0';
+        setTimeout(function() { toast.remove(); }, 300);
+    }, 3000);
 }
 </script>
 {% endblock %}

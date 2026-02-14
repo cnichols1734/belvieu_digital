@@ -48,6 +48,7 @@ def create_app(config_name=None):
     from app.blueprints.admin import admin_bp
     from app.blueprints.webhooks import webhooks_bp
     from app.blueprints.contact import contact_bp
+    from app.blueprints.form_relay import form_relay_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(portal_bp)
@@ -55,9 +56,12 @@ def create_app(config_name=None):
     app.register_blueprint(admin_bp)
     app.register_blueprint(webhooks_bp)
     app.register_blueprint(contact_bp)
+    app.register_blueprint(form_relay_bp)
 
     # Exempt webhooks from CSRF — raw body needed for Stripe signature verification
     csrf.exempt(webhooks_bp)
+    # Exempt form relay from CSRF — public API hit by external client websites
+    csrf.exempt(form_relay_bp)
 
     # --- Root route ---
     @app.route("/")

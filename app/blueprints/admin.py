@@ -46,6 +46,7 @@ from app.models.workspace import Workspace, WorkspaceMember, WorkspaceSettings
 from app.services import invite_service, ticket_service
 from app.services.email_service import send_email
 from app.models.prospect_activity import ProspectActivity
+from app.models.contact_form import ContactFormConfig
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -920,11 +921,19 @@ def workspace_detail(workspace_id):
     # Monthly edit usage
     edit_usage = ticket_service.get_monthly_edit_usage(workspace_id)
 
+    # Contact form relay config
+    contact_form_config = None
+    if site:
+        contact_form_config = ContactFormConfig.query.filter_by(site_id=site.id).first()
+
     active_tab = request.args.get("tab", "overview")
 
     # Determine Stripe dashboard mode for links
     stripe_key = current_app.config.get("STRIPE_SECRET_KEY", "")
     stripe_mode = "live" if stripe_key.startswith("sk_live_") else "test"
+
+    # Base URL for form relay embed code
+    app_base_url = current_app.config.get("APP_BASE_URL", "http://localhost:5001")
 
     return render_template(
         "admin/workspace_detail.html",
@@ -940,6 +949,8 @@ def workspace_detail(workspace_id):
         active_tab=active_tab,
         edit_usage=edit_usage,
         stripe_mode=stripe_mode,
+        contact_form_config=contact_form_config,
+        app_base_url=app_base_url,
     )
 
 
@@ -1418,3 +1429,161 @@ def site_status_override(site_id):
 
     flash(f"Site status changed to '{new_status}'.", "success")
     return redirect(url_for("admin.workspace_detail", workspace_id=site.workspace_id))
+
+
+# ══════════════════════════════════════════════
+#  CONTACT FORM RELAY
+# ══════════════════════════════════════════════
+
+@admin_bp.route("/workspaces/<workspace_id>/contact-form", methods=["POST"])
+@admin_required
+def contact_form_upsert(workspace_id):
+    """Create or update contact form relay config (recipient emails)."""
+    import re
+
+    workspace = db.session.get(Workspace, workspace_id)
+    if workspace is None:
+        flash("Workspace not found.", "error")
+        return redirect(url_for("admin.workspace_list"))
+
+    site = workspace.sites.first()
+    if site is None:
+        flash("No site exists for this workspace. Create a site first.", "error")
+        return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id))
+
+    raw_emails = request.form.get("recipient_emails", "").strip()
+    if not raw_emails:
+        flash("At least one recipient email is required.", "error")
+        return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id) + "?tab=contact_form")
+
+    # Validate each email
+    email_re = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    emails = [e.strip() for e in raw_emails.split(",") if e.strip()]
+    invalid = [e for e in emails if not email_re.match(e)]
+    if invalid:
+        flash(f"Invalid email(s): {', '.join(invalid)}", "error")
+        return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id) + "?tab=contact_form")
+
+    if not emails:
+        flash("At least one valid recipient email is required.", "error")
+        return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id) + "?tab=contact_form")
+
+    config = ContactFormConfig.query.filter_by(site_id=site.id).first()
+
+    if config is None:
+        # Create new config
+        config = ContactFormConfig(
+            site_id=site.id,
+            access_key=ContactFormConfig.generate_access_key(),
+            recipient_emails=", ".join(emails),
+            is_enabled=True,
+        )
+        db.session.add(config)
+
+        audit = AuditEvent(
+            workspace_id=workspace_id,
+            actor_user_id=current_user.id,
+            action="contact_form.created",
+            metadata_={
+                "site_id": site.id,
+                "recipient_emails": emails,
+            },
+        )
+        db.session.add(audit)
+        db.session.commit()
+
+        flash("Contact form relay created. Copy the embed code below.", "success")
+    else:
+        # Update existing config
+        old_emails = config.recipient_emails
+        config.recipient_emails = ", ".join(emails)
+
+        audit = AuditEvent(
+            workspace_id=workspace_id,
+            actor_user_id=current_user.id,
+            action="contact_form.recipients_updated",
+            metadata_={
+                "site_id": site.id,
+                "old_emails": old_emails,
+                "new_emails": ", ".join(emails),
+            },
+        )
+        db.session.add(audit)
+        db.session.commit()
+
+        flash("Recipient emails updated.", "success")
+
+    return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id) + "?tab=contact_form")
+
+
+@admin_bp.route("/workspaces/<workspace_id>/contact-form/toggle", methods=["POST"])
+@admin_required
+def contact_form_toggle(workspace_id):
+    """Enable or disable the contact form relay."""
+    workspace = db.session.get(Workspace, workspace_id)
+    if workspace is None:
+        flash("Workspace not found.", "error")
+        return redirect(url_for("admin.workspace_list"))
+
+    site = workspace.sites.first()
+    if site is None:
+        flash("No site exists for this workspace.", "error")
+        return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id))
+
+    config = ContactFormConfig.query.filter_by(site_id=site.id).first()
+    if config is None:
+        flash("No contact form config found. Create one first.", "error")
+        return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id) + "?tab=contact_form")
+
+    config.is_enabled = not config.is_enabled
+    new_state = "enabled" if config.is_enabled else "disabled"
+
+    audit = AuditEvent(
+        workspace_id=workspace_id,
+        actor_user_id=current_user.id,
+        action=f"contact_form.{new_state}",
+        metadata_={"site_id": site.id},
+    )
+    db.session.add(audit)
+    db.session.commit()
+
+    flash(f"Contact form relay {new_state}.", "success")
+    return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id) + "?tab=contact_form")
+
+
+@admin_bp.route("/workspaces/<workspace_id>/contact-form/regenerate", methods=["POST"])
+@admin_required
+def contact_form_regenerate(workspace_id):
+    """Regenerate the access key, invalidating the old one."""
+    workspace = db.session.get(Workspace, workspace_id)
+    if workspace is None:
+        flash("Workspace not found.", "error")
+        return redirect(url_for("admin.workspace_list"))
+
+    site = workspace.sites.first()
+    if site is None:
+        flash("No site exists for this workspace.", "error")
+        return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id))
+
+    config = ContactFormConfig.query.filter_by(site_id=site.id).first()
+    if config is None:
+        flash("No contact form config found. Create one first.", "error")
+        return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id) + "?tab=contact_form")
+
+    old_key = config.access_key
+    config.access_key = ContactFormConfig.generate_access_key()
+
+    audit = AuditEvent(
+        workspace_id=workspace_id,
+        actor_user_id=current_user.id,
+        action="contact_form.key_regenerated",
+        metadata_={
+            "site_id": site.id,
+            "old_key_prefix": old_key[:8] + "...",
+        },
+    )
+    db.session.add(audit)
+    db.session.commit()
+
+    flash("Access key regenerated. Update the HTML on the client's website with the new embed code.", "success")
+    return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id) + "?tab=contact_form")

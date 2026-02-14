@@ -1,0 +1,67 @@
+{% extends "emails/base.html" %}
+
+{% block title %}New message from {{ name }} via {{ site_name }}{% endblock %}
+
+{% block content %}
+<h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #1a1a1a; line-height: 1.3;">
+  New message from {{ name }}
+</h1>
+<p style="margin: 0 0 24px; font-size: 15px; line-height: 1.7; color: #737373;">
+  Someone submitted the contact form on <strong style="color: #1a1a1a;">{{ site_name }}</strong>.
+</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #fafafa; border-radius: 6px; border: 1px solid #f0f0f0;">
+  <tr>
+    <td style="padding: 20px 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="padding-bottom: 16px;">
+            <p style="margin: 0 0 2px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #999999;">Name</p>
+            <p style="margin: 0; font-size: 15px; color: #1a1a1a; font-weight: 500;">{{ name }}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding-bottom: 16px;">
+            <p style="margin: 0 0 2px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #999999;">Email</p>
+            <p style="margin: 0; font-size: 15px; color: #1a1a1a;">
+              <a href="mailto:{{ email }}" style="color: #2563eb; text-decoration: underline;">{{ email }}</a>
+            </p>
+          </td>
+        </tr>
+        {% if phone %}
+        <tr>
+          <td style="padding-bottom: 16px;">
+            <p style="margin: 0 0 2px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #999999;">Phone</p>
+            <p style="margin: 0; font-size: 15px; color: #1a1a1a;">
+              <a href="tel:{{ phone }}" style="color: #1a1a1a; text-decoration: none;">{{ phone }}</a>
+            </p>
+          </td>
+        </tr>
+        {% endif %}
+        <tr>
+          <td>
+            <p style="margin: 0 0 2px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #999999;">Message</p>
+            <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555; white-space: pre-line;">{{ message }}</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<!-- Reply CTA -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 24px;">
+  <tr>
+    <td align="center">
+      <a href="mailto:{{ email }}?subject=Re: Your inquiry to {{ site_name }}"
+         style="display: inline-block; padding: 12px 28px; background-color: #1a1a1a; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 6px; letter-spacing: -0.01em;">
+        Reply to {{ name }}
+      </a>
+    </td>
+  </tr>
+</table>
+
+<p style="margin: 24px 0 0; font-size: 13px; line-height: 1.6; color: #999999;">
+  You can also reply directly to this email to respond to {{ name }} at {{ email }}.
+</p>
+{% endblock %}
