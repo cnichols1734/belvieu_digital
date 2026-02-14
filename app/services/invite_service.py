@@ -13,14 +13,14 @@ from app.extensions import db
 from app.models.invite import WorkspaceInvite
 
 
-def generate_invite(workspace_id, site_id, email=None, expires_days=30):
+def generate_invite(workspace_id, site_id, email=None, expires_days=45):
     """Create a new invite token for a workspace + site.
 
     Args:
         workspace_id: UUID of the workspace
         site_id: UUID of the site
         email: Optional email to lock the invite to
-        expires_days: Number of days until the token expires (default 30)
+        expires_days: Number of days until the token expires (default 45)
 
     Returns:
         WorkspaceInvite: the newly created invite row

@@ -260,7 +260,7 @@ def register_cli(app):
             site_id=site.id,
             email="joe@demopizza.com",
             token=token,
-            expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=45),
         )
         db.session.add(invite)
 
@@ -367,3 +367,18 @@ def register_cli(app):
         check_price("setup", setup_id)
         click.echo("STRIPE_BASIC_PRICE_ID (monthly):")
         check_price("basic", basic_id)
+
+    @app.cli.command("send-reminders")
+    def send_reminders():
+        """Send D3/D10/D30 follow-up emails to pitched prospects.
+
+        Finds prospects with status "pitched" who have an email, checks
+        how many days since their first outreach email, and sends the
+        appropriate reminder (D3, D10, or D30) if not already sent.
+
+        Usage:
+            flask send-reminders
+        """
+        from app.services.reminder_service import process_reminders
+        count = process_reminders()
+        click.echo(f"Sent {count} reminder(s).")

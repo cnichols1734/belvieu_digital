@@ -1,0 +1,131 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Your website is still ready, {{ business_name }}{% endblock %}
+
+{% block content %}
+{% if reminder_tier == "d3" %}
+{# ── Day 3: Quick check-in ── #}
+<h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #1a1a1a; line-height: 1.3;">
+  Just wanted to make sure you saw this.
+</h1>
+<p style="margin: 0 0 16px; font-size: 15px; line-height: 1.7; color: #555555;">
+  Hi{{ ' ' + contact_name.split(' ')[0] if contact_name else '' }}, I sent over a website I built for <strong style="color: #1a1a1a;">{{ business_name }}</strong> a few days ago. Wanted to make sure it didn't get buried in your inbox.
+</p>
+<p style="margin: 0 0 24px; font-size: 15px; line-height: 1.7; color: #555555;">
+  The demo is still live if you'd like to take a look:
+</p>
+
+{% elif reminder_tier == "d10" %}
+{# ── Day 10: Gentle value reminder ── #}
+<h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #1a1a1a; line-height: 1.3;">
+  Your site is still ready to go.
+</h1>
+<p style="margin: 0 0 16px; font-size: 15px; line-height: 1.7; color: #555555;">
+  Hi{{ ' ' + contact_name.split(' ')[0] if contact_name else '' }}, just a quick follow-up. The website I put together for <strong style="color: #1a1a1a;">{{ business_name }}</strong> is still live and waiting for you.
+</p>
+<p style="margin: 0 0 24px; font-size: 15px; line-height: 1.7; color: #555555;">
+  Everything is ready — hosting, maintenance, and updates are all included. If you've been thinking about it, now is a great time to get started:
+</p>
+
+{% elif reminder_tier == "d30" %}
+{# ── Day 30: Final follow-up ── #}
+<h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #1a1a1a; line-height: 1.3;">
+  Last heads-up — your site link expires soon.
+</h1>
+<p style="margin: 0 0 16px; font-size: 15px; line-height: 1.7; color: #555555;">
+  Hi{{ ' ' + contact_name.split(' ')[0] if contact_name else '' }}, this is my last follow-up about the website I built for <strong style="color: #1a1a1a;">{{ business_name }}</strong>.
+</p>
+<p style="margin: 0 0 24px; font-size: 15px; line-height: 1.7; color: #555555;">
+  Your signup link will expire in the next couple of weeks, so I wanted to give you one last chance to check it out before it does:
+</p>
+
+{% endif %}
+
+{% if demo_url %}
+<!-- Demo Site CTA Button -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 28px;">
+  <tr>
+    <td align="center">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="background-color: #1a1a1a; border-radius: 6px;">
+            <a href="{{ demo_url }}" target="_blank" style="display: inline-block; padding: 14px 32px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 6px;">
+              View Your Demo Site &rarr;
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+{% endif %}
+
+<!-- What's Included -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #fafafa; border-radius: 6px; border: 1px solid #f0f0f0;">
+  <tr>
+    <td style="padding: 20px 24px;">
+      <p style="margin: 0 0 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #999999;">
+        What you get
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="padding: 6px 0;">
+            <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555;">
+              &#10003; A custom website, designed and ready to go live
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0;">
+            <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555;">
+              &#10003; Hosting, security, and ongoing maintenance (all handled)
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0;">
+            <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555;">
+              &#10003; Up to 4 content updates per month through your client portal
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0;">
+            <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555;">
+              &#10003; No contracts (cancel anytime)
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+{% if invite_link %}
+<!-- Subscribe CTA Button -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 24px 0 28px;">
+  <tr>
+    <td align="center">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="background-color: #1a1a1a; border-radius: 6px;">
+            <a href="{{ invite_link }}" target="_blank" style="display: inline-block; padding: 14px 32px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 6px;">
+              Subscribe &amp; Go Live &rarr;
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+{% endif %}
+
+<p style="margin: 24px 0 0; font-size: 14px; line-height: 1.7; color: #737373;">
+  No pressure at all. If you have any questions, just reply to this email.
+</p>
+{% endblock %}
+
+{% block footer %}
+&copy; 2026 Belvieu Digital. All rights reserved.<br>
+You're receiving this as a follow-up to a previous email about a website we built for your business.
+{% endblock %}
