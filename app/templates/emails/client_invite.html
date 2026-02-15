@@ -49,7 +49,7 @@
         <tr>
           <td style="padding: 8px 0;">
             <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #555555;">
-              <strong style="color: #1a1a1a;">2.</strong> Activate your subscription &mdash; $250 to get started, then $59/mo (custom domain included, up to $25/yr)
+              {% if config.PROMO_NO_SETUP_FEE %}<strong style="color: #1a1a1a;">2.</strong> Activate your subscription &mdash; just $59/mo, no setup fee (custom domain included, up to $25/yr){% else %}<strong style="color: #1a1a1a;">2.</strong> Activate your subscription &mdash; $250 to get started, then $59/mo (custom domain included, up to $25/yr){% endif %}
             </p>
           </td>
         </tr>

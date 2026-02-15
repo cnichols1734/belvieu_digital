@@ -5,10 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <title>Belvieu Digital | Custom Websites, One Simple Monthly Fee</title>
+  {% if config.PROMO_NO_SETUP_FEE %}
+  <meta name="description" content="Belvieu Digital builds custom websites for local businesses. Just $59/month — no setup fee. No contracts, cancel anytime. Your site, built and managed by real people.">
+  {% else %}
   <meta name="description" content="Belvieu Digital builds custom websites for local businesses. $250 to get started, then $59/month. No contracts, cancel anytime. Your site, built and managed by real people.">
+  {% endif %}
 
   <meta property="og:title" content="Belvieu Digital | Websites Made Simple">
+  {% if config.PROMO_NO_SETUP_FEE %}
+  <meta property="og:description" content="Custom websites for local businesses. Just $59/month — no setup fee. Cancel anytime.">
+  {% else %}
   <meta property="og:description" content="Custom websites for local businesses. $250 to get started, then $59/month. Cancel anytime.">
+  {% endif %}
   <meta property="og:type" content="website">
   <meta name="csrf-token" content="{{ csrf_token() }}">
 
@@ -780,7 +788,11 @@
         A website your business<br>actually deserves.
       </h1>
       <p class="reveal" style="transition-delay: 0.2s">
+        {% if config.PROMO_NO_SETUP_FEE %}
+        We design, build, and manage a custom website for your business. Just $59/month — no setup fee. No contracts, no templates, no headaches.
+        {% else %}
         We design, build, and manage a custom website for your business. $250 to get started, then just $59/month. No contracts, no templates, no headaches.
+        {% endif %}
       </p>
       <div class="hero-actions reveal" style="transition-delay: 0.3s">
         <a href="#pricing" class="btn btn-primary">See Pricing</a>
@@ -870,18 +882,30 @@
       <div class="pricing-header reveal">
         <span class="label">Simple Pricing</span>
         <h2>One plan. No surprises.</h2>
+        {% if config.PROMO_NO_SETUP_FEE %}
+        <p>One simple monthly price. No setup fee, no long-term contracts. Cancel anytime.</p>
+        {% else %}
         <p>One-time setup fee, simple monthly hosting. No long-term contracts. Cancel anytime.</p>
+        {% endif %}
       </div>
 
       <div class="pricing-grid" style="max-width: 560px; margin: 0 auto; grid-template-columns: 1fr;">
 
         <!-- Single Plan -->
-        <div class="pricing-card pricing-card--featured reveal" style="transition-delay: 0.1s; padding: 3rem 3rem;">
+        <div class="pricing-card pricing-card--featured reveal" style="transition-delay: 0.1s; padding: 3rem 3rem; position: relative; overflow: hidden;">
           <div class="plan-name" style="display: none;">Website as a Service</div>
+          {% if config.PROMO_NO_SETUP_FEE %}
+          <div style="display: inline-block; background: #22c55e; color: #fff; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 0.3rem 0.85rem; border-radius: 99px; margin-bottom: 1rem;">Limited Time</div>
+          <div style="font-size: 1rem; color: #999; text-decoration: line-through; margin-bottom: 0.25rem;">$250 setup fee</div>
+          <div class="price">$59<span style="font-size: 1.1rem; font-weight: 500;">/mo</span></div>
+          <div class="price-sub" style="font-weight: 600; color: var(--color-text-primary, #1a1a1a);">No setup fee — one simple monthly price</div>
+          <div class="price-desc" style="margin-top: 4px;">Everything included. Custom website, hosting, and support.</div>
+          {% else %}
           <div class="price">$250</div>
           <div class="price-sub">to get started</div>
           <div class="price-desc" style="margin-top: 8px; font-size: 1.1rem; font-weight: 600; color: var(--color-text-primary, #1a1a1a);">Then just $59/month</div>
           <div class="price-desc" style="margin-top: 4px;">Includes setup + your first month of hosting</div>
+          {% endif %}
 
           <ul class="pricing-features">
             <li>

@@ -88,9 +88,15 @@
 <p style="margin: 24px 0 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #999999;">
   Pricing
 </p>
+{% if config.PROMO_NO_SETUP_FEE %}
+<p style="margin: 0 0 20px; font-size: 15px; line-height: 1.7; color: #555555;">
+  Just <strong style="color: #1a1a1a;">$59/mo</strong> &mdash; <span style="text-decoration: line-through; color: #999;">$250 setup fee</span> waived for a limited time. A custom domain (e.g. .com, up to $25/yr) is included with your active subscription &mdash; we handle the setup for you within a few days of activation.
+</p>
+{% else %}
 <p style="margin: 0 0 20px; font-size: 15px; line-height: 1.7; color: #555555;">
   <strong style="color: #1a1a1a;">$250 to get started</strong> (includes your first month), then <strong style="color: #1a1a1a;">$59/mo</strong> after that. A custom domain (e.g. .com, up to $25/yr) is included with your active subscription — we handle the setup for you within a few days of activation.
 </p>
+{% endif %}
 
 <!-- Subscribe CTA Button -->
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 28px;">

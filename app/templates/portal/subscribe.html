@@ -22,11 +22,19 @@
 </div>
 
 <div class="pricing-grid" style="max-width: 620px; margin: 0 auto;">
-    <div class="pricing-card pricing-card-featured" style="padding: 2.5rem 2.5rem 2rem;">
+    <div class="pricing-card pricing-card-featured" style="padding: 2.5rem 2.5rem 2rem; position: relative; overflow: hidden;">
+        {% if config.PROMO_NO_SETUP_FEE %}
+        <div style="display: inline-block; background: #22c55e; color: #fff; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 0.25rem 0.75rem; border-radius: 99px; margin-bottom: 0.75rem;">Limited Time</div>
+        <div style="font-size: 0.95rem; color: #999; text-decoration: line-through; margin-bottom: 0.15rem;">$250 setup fee</div>
+        <div class="pricing-price">$59<span style="font-size: 0.95rem; font-weight: 500;">/mo</span></div>
+        <div class="pricing-description" style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem; color: var(--color-text-primary);">No setup fee — one simple monthly price</div>
+        <div class="pricing-description" style="font-size: 0.85rem; margin-top: 0.25rem;">Everything included. Custom website, hosting, and support.</div>
+        {% else %}
         <div class="pricing-price">$250</div>
         <div class="pricing-description" style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem;">to get started</div>
         <div class="pricing-description" style="font-size: 1.05rem; font-weight: 700; color: var(--color-text-primary);">Then just $59/month</div>
         <div class="pricing-description" style="font-size: 0.85rem; margin-top: 0.25rem;">Includes setup + your first month of hosting</div>
+        {% endif %}
 
         <ul class="pricing-features">
             <li>
@@ -181,10 +189,16 @@
     </div>
 </div>
 
+{% if config.PROMO_NO_SETUP_FEE %}
+<p style="text-align: center; margin-top: 1.5rem; font-size: 0.85rem; color: var(--color-text-muted);">
+    No contracts — cancel anytime. Just $59/month, all-inclusive.
+</p>
+{% else %}
 <p style="text-align: center; margin-top: 1.5rem; font-size: 0.85rem; color: var(--color-text-muted);">
     No contracts — cancel anytime. The $250 covers your custom site build + first month of hosting.<br>
     Then just $59/month ongoing.
 </p>
+{% endif %}
 
 <script>
 (function() {

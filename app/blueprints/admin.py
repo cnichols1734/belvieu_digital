@@ -197,9 +197,12 @@ def stripe_health():
             "detail": f"Connection failed: {e}",
         })
 
-    # ── 2. Setup Price ──
+    # ── 2. Setup Price (skipped when promo is active) ──
+    promo_active = current_app.config.get("PROMO_NO_SETUP_FEE", False)
     setup_price_id = current_app.config.get("STRIPE_SETUP_PRICE_ID", "")
-    if not setup_price_id:
+    if promo_active:
+        checks.append({"name": "Setup Price", "status": "ok", "detail": "Waived — PROMO_NO_SETUP_FEE is enabled"})
+    elif not setup_price_id:
         checks.append({"name": "Setup Price", "status": "error", "detail": "STRIPE_SETUP_PRICE_ID not set"})
     else:
         try:
