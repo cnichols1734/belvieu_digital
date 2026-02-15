@@ -8,7 +8,7 @@
 
 ## Project Overview
 
-WaaS (Website-as-a-Service) portal for Chris's business: find small businesses on Google Maps / Facebook with no site or a bad one, build them a custom one-pager, pitch them with a live .dev preview link, convert them to paying clients with a $250 one-time setup fee + $59/mo (first month free with setup).
+WaaS (Website-as-a-Service) portal for Chris's business: find small businesses on Google Maps / Facebook with no site or a bad one, build them a custom one-pager, pitch them with a live .dev preview link, convert them to paying clients at $59/mo. Optionally a $250 one-time setup fee is charged (first month free with setup) — controlled by the `PROMO_NO_SETUP_FEE` env var / feature flag.
 
 **Stack:** Flask, Supabase Postgres, Stripe, Railway. Server-rendered HTML (Jinja), vanilla JS + CSS. No React, no SPA.
 
@@ -22,7 +22,8 @@ WaaS (Website-as-a-Service) portal for Chris's business: find small businesses o
 - **Stripe CLI** installed via Homebrew (`stripe` v1.35.0), authenticated. Session expires after 90 days.
 - **Stripe products created in test mode:**
   - WaaS Monthly — $59/mo — Product: `prod_TwKBB8dPngYZ1f`, Price: `price_1SyRX13E1rMCjOFGiCt4XvzM`
-  - Website Setup Fee — $250 one-time — Run `flask create-setup-price` to create, set STRIPE_SETUP_PRICE_ID env var
+  - Website Setup Fee — $250 one-time — Run `flask create-setup-price` to create, set STRIPE_SETUP_PRICE_ID env var (not used when `PROMO_NO_SETUP_FEE=true`)
+- **Promo feature flag:** `PROMO_NO_SETUP_FEE=true` in `.env` waives the $250 setup fee site-wide (Stripe checkout, landing page, subscribe page, all emails). Set to empty or remove to restore normal pricing.
 - **Webhook listener:** run `stripe listen --forward-to localhost:5000/stripe/webhooks` each dev session. The `whsec_` signing secret in `.env` matches this CLI listener.
 - **Local dev DB:** SQLite (`sqlite:///dev.db`). Switch to Supabase Postgres for production.
 - **Supabase project:** `lynrxezjbafyrcgblhdl` (new, clean). Connection strings not yet configured — need DB password + region from Chris when ready for prod.

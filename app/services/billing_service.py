@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 def get_plan_from_price_id(price_id, app_config):
     """Map a Stripe price ID to a plan name.
 
-    Single tier: all subscriptions are 'basic' ($59/mo + $250 setup).
+    Single tier: all subscriptions are 'basic' ($59/mo).
+    Setup fee ($250) is charged separately when PROMO_NO_SETUP_FEE is off.
     Returns None if the price_id doesn't match the configured plan.
     """
     if price_id == app_config.get("STRIPE_BASIC_PRICE_ID"):

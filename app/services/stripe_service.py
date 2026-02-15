@@ -108,14 +108,15 @@ def _send_activation_email(workspace_id, site_slug):
 
 def create_checkout_session(workspace_id, site_id, site_slug,
                             customer_email=None, customer_name=None):
-    """Create a Stripe Checkout Session for subscription + setup fee.
+    """Create a Stripe Checkout Session for subscription + optional setup fee.
 
     Gets or creates a Stripe Customer for this workspace, then creates
-    a checkout session with:
+    a checkout session.  When PROMO_NO_SETUP_FEE is enabled the $250
+    setup fee is waived and the customer pays only $59/mo recurring.
+    Otherwise the session includes:
       - $191 setup fee (STRIPE_SETUP_PRICE_ID) + $59 first month
         = $250 total at checkout (matches advertised price)
       - Recurring $59/mo subscription (STRIPE_BASIC_PRICE_ID)
-      - No trial — Stripe shows "Subscribe" not "Start trial"
 
     Args:
         customer_email: The logged-in user's email (set on Stripe customer
@@ -127,8 +128,9 @@ def create_checkout_session(workspace_id, site_id, site_slug,
     """
     stripe.api_key = current_app.config["STRIPE_SECRET_KEY"]
     app_base_url = current_app.config["APP_BASE_URL"]
-    setup_price_id = current_app.config["STRIPE_SETUP_PRICE_ID"]
     basic_price_id = current_app.config["STRIPE_BASIC_PRICE_ID"]
+    promo_active = current_app.config.get("PROMO_NO_SETUP_FEE", False)
+    setup_price_id = current_app.config.get("STRIPE_SETUP_PRICE_ID") if not promo_active else None
 
     # Get or create Stripe customer
     billing_customer = BillingCustomer.query.filter_by(
@@ -175,23 +177,31 @@ def create_checkout_session(workspace_id, site_id, site_slug,
         get_or_create_billing_customer(workspace_id, stripe_customer_id)
 
     def _create_session(customer_id):
+        # Build line items — skip setup fee when promo is active
+        if promo_active:
+            items = [
+                {"price": basic_price_id, "quantity": 1},    # $59/mo recurring only
+            ]
+            submit_msg = "Your $59/month subscription starts today."
+        else:
+            items = [
+                {"price": setup_price_id, "quantity": 1},   # $191 one-time setup fee
+                {"price": basic_price_id, "quantity": 1},    # $59/mo recurring
+            ]
+            submit_msg = "Your $59/month subscription begins 30 days from today."
+
         return stripe.checkout.Session.create(
             mode="subscription",
             customer=customer_id,
             customer_update={"name": "auto", "address": "auto"},
-            line_items=[
-                {"price": setup_price_id, "quantity": 1},   # $191 one-time setup fee
-                {"price": basic_price_id, "quantity": 1},    # $59/mo recurring
-            ],
+            line_items=items,
             success_url=(
                 f"{app_base_url}/{site_slug}/billing/success"
                 f"?session_id={{CHECKOUT_SESSION_ID}}"
             ),
             cancel_url=f"{app_base_url}/{site_slug}/billing/cancel",
             custom_text={
-                "submit": {
-                    "message": "Your $59/month subscription begins 30 days from today."
-                },
+                "submit": {"message": submit_msg},
             },
             metadata={
                 "workspace_id": str(workspace_id),

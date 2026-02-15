@@ -21,6 +21,12 @@ class Config:
     STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY")
     APP_BASE_URL = os.environ.get("APP_BASE_URL", "http://localhost:5000")
 
+    # --- Promo pricing ---
+    # When True, the $250 setup fee is waived site-wide (Stripe, UI, emails).
+    PROMO_NO_SETUP_FEE = os.environ.get(
+        "PROMO_NO_SETUP_FEE", ""
+    ).lower() in ("1", "true", "yes")
+
     # --- Email (Google Workspace SMTP) ---
     MAIL_SMTP_HOST = os.environ.get("MAIL_SMTP_HOST", "smtp.gmail.com")
     MAIL_SMTP_PORT = int(os.environ.get("MAIL_SMTP_PORT", 587))
@@ -65,9 +71,14 @@ class Config:
             "STRIPE_SECRET_KEY",
             "STRIPE_WEBHOOK_SECRET",
             "STRIPE_BASIC_PRICE_ID",
-            "STRIPE_SETUP_PRICE_ID",
             "APP_BASE_URL",
         ]
+        # Setup price ID is only required when promo is OFF
+        promo_on = os.environ.get(
+            "PROMO_NO_SETUP_FEE", ""
+        ).lower() in ("1", "true", "yes")
+        if not promo_on:
+            required.append("STRIPE_SETUP_PRICE_ID")
         missing = [v for v in required if not os.environ.get(v)]
         if missing:
             raise RuntimeError(
@@ -96,6 +107,7 @@ class TestConfig(Config):
     STRIPE_SETUP_PRICE_ID = "price_setup_test"
     STRIPE_PUBLISHABLE_KEY = "pk_test_fake"
     APP_BASE_URL = "http://localhost:5000"
+    PROMO_NO_SETUP_FEE = False  # default off in tests; override per-test as needed
     WTF_CSRF_ENABLED = False  # disable CSRF for test forms
     RATELIMIT_ENABLED = False  # disable rate limiting in tests
     SESSION_COOKIE_SECURE = False

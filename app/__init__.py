@@ -286,6 +286,9 @@ def register_cli(app):
 
         Run once, then copy the printed price ID into the
         STRIPE_SETUP_PRICE_ID environment variable.
+
+        Note: Not needed when PROMO_NO_SETUP_FEE=true — the setup fee
+        is waived and this price ID is not used during checkout.
         """
         import stripe as _stripe
 
