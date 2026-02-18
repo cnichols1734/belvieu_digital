@@ -372,7 +372,8 @@ def register_cli(app):
         check_price("basic", basic_id)
 
     @app.cli.command("send-reminders")
-    def send_reminders():
+    @click.option("--dry-run", is_flag=True, help="Show what would be sent without actually sending.")
+    def send_reminders(dry_run):
         """Send D3/D10/D30 follow-up emails to pitched prospects.
 
         Finds prospects with status "pitched" who have an email, checks
@@ -381,7 +382,7 @@ def register_cli(app):
 
         Usage:
             flask send-reminders
+            flask send-reminders --dry-run
         """
         from app.services.reminder_service import process_reminders
-        count = process_reminders()
-        click.echo(f"Sent {count} reminder(s).")
+        process_reminders(dry_run=dry_run)
