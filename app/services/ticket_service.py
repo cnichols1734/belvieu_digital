@@ -318,11 +318,25 @@ def get_ticket_with_messages(ticket_id, include_internal=False):
     Returns:
         Tuple of (ticket, messages_list) or (None, []) if not found.
     """
-    ticket = db.session.get(Ticket, ticket_id)
+    from sqlalchemy.orm import joinedload
+
+    ticket = (
+        Ticket.query
+        .options(joinedload(Ticket.author))
+        .filter_by(id=ticket_id)
+        .first()
+    )
     if ticket is None:
         return None, []
 
-    query = TicketMessage.query.filter_by(ticket_id=ticket_id)
+    query = (
+        TicketMessage.query
+        .options(
+            joinedload(TicketMessage.author),
+            joinedload(TicketMessage.attachments),
+        )
+        .filter_by(ticket_id=ticket_id)
+    )
     if not include_internal:
         query = query.filter_by(is_internal=False)
     messages = query.order_by(TicketMessage.created_at.asc()).all()

@@ -32,6 +32,7 @@ from flask import (
     url_for,
 )
 from flask_login import current_user
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.decorators import admin_required
 from app.extensions import db
@@ -124,7 +125,9 @@ def dashboard():
     from datetime import datetime, timezone
 
     pending_invite_records = (
-        WorkspaceInvite.query.filter(
+        WorkspaceInvite.query
+        .options(joinedload(WorkspaceInvite.workspace))
+        .filter(
             WorkspaceInvite.used_at.is_(None),
             WorkspaceInvite.expires_at > datetime.now(timezone.utc),
         )
@@ -148,9 +151,13 @@ def dashboard():
                 inv.days_ago = 0
             pending_invites_data.append(inv)
 
-    # --- Recent activity ---
+    # --- Recent activity (eager load actor to avoid N+1) ---
     recent_activity = (
-        AuditEvent.query.order_by(AuditEvent.created_at.desc()).limit(20).all()
+        AuditEvent.query
+        .options(joinedload(AuditEvent.actor))
+        .order_by(AuditEvent.created_at.desc())
+        .limit(20)
+        .all()
     )
 
     return render_template(
@@ -1014,8 +1021,6 @@ def prospect_convert(prospect_id):
 @admin_required
 def workspace_list():
     """List all workspaces with subscription status and invite info."""
-    from sqlalchemy.orm import joinedload
-
     workspaces = Workspace.query.order_by(Workspace.created_at.desc()).all()
     ws_ids = [ws.id for ws in workspaces]
 
@@ -1090,59 +1095,58 @@ def workspace_list():
 @admin_required
 def workspace_detail(workspace_id):
     """Full workspace detail: site, members, billing, tickets, invites."""
-    workspace = db.session.get(Workspace, workspace_id)
+    workspace = (
+        Workspace.query
+        .options(
+            joinedload(Workspace.settings),
+            joinedload(Workspace.billing_customer),
+            joinedload(Workspace.prospect),
+        )
+        .filter_by(id=workspace_id)
+        .first()
+    )
     if workspace is None:
         flash("Workspace not found.", "error")
         return redirect(url_for("admin.workspace_list"))
 
-    site = workspace.sites.first()
-    members = workspace.members.all()
+    # Direct queries instead of dynamic relationship traversals
+    site = Site.query.filter_by(workspace_id=workspace_id).first()
 
-    # Enrich members with user info - batch fetch all users at once
-    user_ids = [m.user_id for m in members]
-    users = (
-        {u.id: u for u in User.query.filter(User.id.in_(user_ids)).all()}
-        if user_ids
-        else {}
+    members = (
+        WorkspaceMember.query
+        .options(joinedload(WorkspaceMember.user))
+        .filter_by(workspace_id=workspace_id)
+        .all()
     )
-    member_data = [{"member": m, "user": users.get(m.user_id)} for m in members]
+    member_data = [{"member": m, "user": m.user} for m in members]
 
-    # Subscription
     subscription = (
         BillingSubscription.query.filter_by(workspace_id=workspace_id)
         .order_by(BillingSubscription.created_at.desc())
         .first()
     )
 
-    # Billing customer
-    billing_customer = BillingCustomer.query.filter_by(
-        workspace_id=workspace_id
-    ).first()
+    billing_customer = workspace.billing_customer
 
-    # Invites
     invites = (
         WorkspaceInvite.query.filter_by(workspace_id=workspace_id)
         .order_by(WorkspaceInvite.created_at.desc())
         .all()
     )
 
-    # Tickets
     tickets = (
-        Ticket.query.filter_by(workspace_id=workspace_id)
+        Ticket.query
+        .options(joinedload(Ticket.author), joinedload(Ticket.assigned_to))
+        .filter_by(workspace_id=workspace_id)
         .order_by(Ticket.last_activity_at.desc())
         .limit(10)
         .all()
     )
 
-    # Prospect back-reference
-    prospect = None
-    if workspace.prospect_id:
-        prospect = db.session.get(Prospect, workspace.prospect_id)
+    prospect = workspace.prospect
 
-    # Monthly edit usage
     edit_usage = ticket_service.get_monthly_edit_usage(workspace_id)
 
-    # Contact form relay config
     contact_form_config = None
     if site:
         contact_form_config = ContactFormConfig.query.filter_by(site_id=site.id).first()
@@ -1166,7 +1170,7 @@ def workspace_detail(workspace_id):
         invites=invites,
         tickets=tickets,
         prospect=prospect,
-        settings=workspace.settings,
+        settings=workspace.settings or WorkspaceSettings(workspace_id=workspace_id),
         active_tab=active_tab,
         edit_usage=edit_usage,
         stripe_mode=stripe_mode,
@@ -1452,7 +1456,10 @@ def ticket_list():
     status_filter = request.args.get("status")
     assignee_filter = request.args.get("assignee")
 
-    query = Ticket.query
+    query = Ticket.query.options(
+        joinedload(Ticket.workspace),
+        joinedload(Ticket.assigned_to),
+    )
 
     if status_filter and status_filter in Ticket.STATUSES:
         query = query.filter_by(status=status_filter)
@@ -1465,7 +1472,6 @@ def ticket_list():
 
     tickets = query.order_by(Ticket.last_activity_at.desc()).all()
 
-    # Get admin users for assignee dropdown
     admin_users = User.query.filter_by(is_admin=True).all()
 
     return render_template(
@@ -1547,7 +1553,7 @@ def ticket_reply(ticket_id):
             author = db.session.get(User, ticket.author_user_id)
             if author:
                 workspace = db.session.get(Workspace, ticket.workspace_id)
-                site = workspace.sites.first() if workspace else None
+                site = Site.query.filter_by(workspace_id=ticket.workspace_id).first() if workspace else None
                 site_slug = site.site_slug if site else ""
                 base_url = current_app.config["APP_BASE_URL"]
                 send_email(
@@ -1687,7 +1693,7 @@ def contact_form_upsert(workspace_id):
         flash("Workspace not found.", "error")
         return redirect(url_for("admin.workspace_list"))
 
-    site = workspace.sites.first()
+    site = Site.query.filter_by(workspace_id=workspace_id).first()
     if site is None:
         flash("No site exists for this workspace. Create a site first.", "error")
         return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id))
@@ -1778,7 +1784,7 @@ def contact_form_toggle(workspace_id):
         flash("Workspace not found.", "error")
         return redirect(url_for("admin.workspace_list"))
 
-    site = workspace.sites.first()
+    site = Site.query.filter_by(workspace_id=workspace_id).first()
     if site is None:
         flash("No site exists for this workspace.", "error")
         return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id))
@@ -1819,7 +1825,7 @@ def contact_form_regenerate(workspace_id):
         flash("Workspace not found.", "error")
         return redirect(url_for("admin.workspace_list"))
 
-    site = workspace.sites.first()
+    site = Site.query.filter_by(workspace_id=workspace_id).first()
     if site is None:
         flash("No site exists for this workspace.", "error")
         return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id))
