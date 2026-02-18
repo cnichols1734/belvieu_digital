@@ -127,6 +127,16 @@ class ProdConfig(Config):
     SESSION_COOKIE_SECURE = True
     REMEMBER_COOKIE_SECURE = True
 
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        **Config.SQLALCHEMY_ENGINE_OPTIONS,
+        "pool_size": 5,
+        "max_overflow": 10,
+        "pool_timeout": 30,
+        "connect_args": {
+            "options": "-c statement_timeout=10000",
+        },
+    }
+
 
 config_by_name = {
     "development": DevConfig,

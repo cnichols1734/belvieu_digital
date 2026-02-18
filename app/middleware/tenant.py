@@ -11,10 +11,12 @@ Access levels (computed from billing_subscriptions.status):
 """
 
 from flask import abort, g, request
+from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 from app.models.site import Site
 from app.models.billing import BillingSubscription
+from app.models.workspace import Workspace
 
 
 def resolve_tenant():
@@ -26,39 +28,42 @@ def resolve_tenant():
     Only runs on routes that have a `site_slug` URL parameter.
     Skips static files, auth routes, admin routes, and webhooks.
     """
-    # Only process requests that have a site_slug view arg
     if request.view_args is None:
         return
     site_slug = request.view_args.get("site_slug")
     if site_slug is None:
         return
 
-    # Skip non-portal routes (static, auth, admin, webhooks)
-    # These are handled by their own blueprints
     path = request.path
     if path.startswith(("/static/", "/auth/", "/admin/", "/stripe/")):
         return
 
-    # --- Resolve site from slug ---
-    site = Site.query.filter_by(site_slug=site_slug).first()
+    # Single query: load site + workspace in one JOIN
+    site = (
+        Site.query
+        .options(joinedload(Site.workspace))
+        .filter_by(site_slug=site_slug)
+        .first()
+    )
     if site is None:
         abort(404)
 
     workspace = site.workspace
 
-    # --- Set tenant context on g ---
     g.site = site
     g.workspace = workspace
     g.workspace_id = workspace.id
 
-    # --- Resolve subscription ---
-    subscription = BillingSubscription.query.filter_by(
-        workspace_id=workspace.id
-    ).order_by(BillingSubscription.created_at.desc()).first()
+    # Subscription query (still needed, but just 1 query)
+    subscription = (
+        BillingSubscription.query
+        .filter_by(workspace_id=workspace.id)
+        .order_by(BillingSubscription.created_at.desc())
+        .first()
+    )
 
     g.subscription = subscription
 
-    # --- Compute access level ---
     if subscription is None:
         g.access_level = "subscribe"
     elif subscription.status in ("active", "trialing"):
@@ -66,7 +71,6 @@ def resolve_tenant():
     elif subscription.status == "past_due":
         g.access_level = "read_only"
     else:
-        # canceled, unpaid, incomplete_expired
         g.access_level = "blocked"
 
 
