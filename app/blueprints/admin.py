@@ -55,15 +55,23 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 #  DASHBOARD
 # ══════════════════════════════════════════════
 
+
 @admin_bp.route("/")
 @admin_required
 def dashboard():
     """Admin dashboard — overview metrics, pipeline summary, open tickets, activity feed."""
 
-    # --- Pipeline counts ---
-    pipeline_counts = {}
+    # --- Pipeline counts (single query with GROUP BY) ---
+    from sqlalchemy import func
+
+    pipeline_counts = dict(
+        db.session.query(Prospect.status, func.count(Prospect.id))
+        .group_by(Prospect.status)
+        .all()
+    )
     for status in Prospect.STATUSES:
-        pipeline_counts[status] = Prospect.query.filter_by(status=status).count()
+        if status not in pipeline_counts:
+            pipeline_counts[status] = 0
     total_prospects = sum(pipeline_counts.values())
 
     # --- Conversion rate ---
@@ -76,30 +84,36 @@ def dashboard():
         else 0
     )
 
-    # --- Revenue metrics (single tier: $59/mo) ---
-    active_subs = BillingSubscription.query.filter_by(status="active").all()
-    active_count = len(active_subs)
+    # --- Revenue metrics (single query for active count) ---
+    active_count = BillingSubscription.query.filter_by(
+        status="active", cancel_at_period_end=False
+    ).count()
     mrr = active_count * 59
 
-    # --- At-risk clients (past_due subscriptions) ---
-    at_risk_subs = BillingSubscription.query.filter_by(status="past_due").all()
+    # --- At-risk clients (past_due) - single query with JOIN ---
     at_risk_data = []
-    for sub in at_risk_subs:
-        ws = db.session.get(Workspace, sub.workspace_id)
-        if ws:
-            at_risk_data.append({"workspace": ws, "subscription": sub})
-
-    # --- Cancelling clients (active but cancel_at_period_end) ---
-    cancelling_subs = (
-        BillingSubscription.query
-        .filter_by(status="active", cancel_at_period_end=True)
+    at_risk_subs = (
+        db.session.query(BillingSubscription, Workspace)
+        .filter(BillingSubscription.status == "past_due")
+        .join(Workspace, BillingSubscription.workspace_id == Workspace.id)
         .all()
     )
+    for sub, ws in at_risk_subs:
+        at_risk_data.append({"workspace": ws, "subscription": sub})
+
+    # --- Cancelling clients (active but cancel_at_period_end) - single query with JOIN ---
     cancelling_data = []
-    for sub in cancelling_subs:
-        ws = db.session.get(Workspace, sub.workspace_id)
-        if ws:
-            cancelling_data.append({"workspace": ws, "subscription": sub})
+    cancelling_subs = (
+        db.session.query(BillingSubscription, Workspace)
+        .filter(
+            BillingSubscription.status == "active",
+            BillingSubscription.cancel_at_period_end == True,
+        )
+        .join(Workspace, BillingSubscription.workspace_id == Workspace.id)
+        .all()
+    )
+    for sub, ws in cancelling_subs:
+        cancelling_data.append({"workspace": ws, "subscription": sub})
 
     # --- Open tickets ---
     open_tickets_count = Ticket.query.filter(
@@ -110,8 +124,7 @@ def dashboard():
     from datetime import datetime, timezone
 
     pending_invite_records = (
-        WorkspaceInvite.query
-        .filter(
+        WorkspaceInvite.query.filter(
             WorkspaceInvite.used_at.is_(None),
             WorkspaceInvite.expires_at > datetime.now(timezone.utc),
         )
@@ -137,10 +150,7 @@ def dashboard():
 
     # --- Recent activity ---
     recent_activity = (
-        AuditEvent.query
-        .order_by(AuditEvent.created_at.desc())
-        .limit(20)
-        .all()
+        AuditEvent.query.order_by(AuditEvent.created_at.desc()).limit(20).all()
     )
 
     return render_template(
@@ -162,6 +172,7 @@ def dashboard():
 #  STRIPE HEALTH
 # ══════════════════════════════════════════════
 
+
 @admin_bp.route("/stripe-health")
 @admin_required
 def stripe_health():
@@ -180,126 +191,269 @@ def stripe_health():
         account = _stripe.Account.retrieve()
         display_name = "Unknown"
         if hasattr(account, "settings") and account.settings:
-            display_name = getattr(account.settings.dashboard, "display_name", None) or "Unknown"
+            display_name = (
+                getattr(account.settings.dashboard, "display_name", None) or "Unknown"
+            )
         if not display_name or display_name == "Unknown":
             display_name = getattr(account, "business_profile", {})
             if hasattr(display_name, "name"):
                 display_name = display_name.name or "Unknown"
-        checks.append({
-            "name": "Stripe API",
-            "status": "ok",
-            "detail": f"Connected — {display_name} ({key_mode} mode)",
-        })
+        checks.append(
+            {
+                "name": "Stripe API",
+                "status": "ok",
+                "detail": f"Connected — {display_name} ({key_mode} mode)",
+            }
+        )
     except Exception as e:
-        checks.append({
-            "name": "Stripe API",
-            "status": "error",
-            "detail": f"Connection failed: {e}",
-        })
+        checks.append(
+            {
+                "name": "Stripe API",
+                "status": "error",
+                "detail": f"Connection failed: {e}",
+            }
+        )
 
     # ── 2. Setup Price (skipped when promo is active) ──
     promo_active = current_app.config.get("PROMO_NO_SETUP_FEE", False)
     setup_price_id = current_app.config.get("STRIPE_SETUP_PRICE_ID", "")
     if promo_active:
-        checks.append({"name": "Setup Price", "status": "ok", "detail": "Waived — PROMO_NO_SETUP_FEE is enabled"})
+        checks.append(
+            {
+                "name": "Setup Price",
+                "status": "ok",
+                "detail": "Waived — PROMO_NO_SETUP_FEE is enabled",
+            }
+        )
     elif not setup_price_id:
-        checks.append({"name": "Setup Price", "status": "error", "detail": "STRIPE_SETUP_PRICE_ID not set"})
+        checks.append(
+            {
+                "name": "Setup Price",
+                "status": "error",
+                "detail": "STRIPE_SETUP_PRICE_ID not set",
+            }
+        )
     else:
         try:
             price = _stripe.Price.retrieve(setup_price_id, expand=["product"])
             product = price.get("product")
-            product_active = product.get("active", False) if isinstance(product, dict) else "?"
+            product_active = (
+                product.get("active", False) if isinstance(product, dict) else "?"
+            )
             price_live = getattr(price, "livemode", None)
-            mode_match = (price_live and key_mode == "Live") or (not price_live and key_mode == "Test")
+            mode_match = (price_live and key_mode == "Live") or (
+                not price_live and key_mode == "Test"
+            )
             if not product_active:
-                checks.append({"name": "Setup Price", "status": "error", "detail": f"{setup_price_id} — product is NOT active"})
+                checks.append(
+                    {
+                        "name": "Setup Price",
+                        "status": "error",
+                        "detail": f"{setup_price_id} — product is NOT active",
+                    }
+                )
             elif not mode_match:
-                checks.append({"name": "Setup Price", "status": "warn", "detail": f"{setup_price_id} — mode mismatch (price={'Live' if price_live else 'Test'}, key={key_mode})"})
+                checks.append(
+                    {
+                        "name": "Setup Price",
+                        "status": "warn",
+                        "detail": f"{setup_price_id} — mode mismatch (price={'Live' if price_live else 'Test'}, key={key_mode})",
+                    }
+                )
             else:
-                checks.append({"name": "Setup Price", "status": "ok", "detail": f"${price.unit_amount / 100:.2f} one-time — product active"})
+                checks.append(
+                    {
+                        "name": "Setup Price",
+                        "status": "ok",
+                        "detail": f"${price.unit_amount / 100:.2f} one-time — product active",
+                    }
+                )
         except Exception as e:
-            checks.append({"name": "Setup Price", "status": "error", "detail": f"{setup_price_id} — {e}"})
+            checks.append(
+                {
+                    "name": "Setup Price",
+                    "status": "error",
+                    "detail": f"{setup_price_id} — {e}",
+                }
+            )
 
     # ── 3. Basic Price ──
     basic_price_id = current_app.config.get("STRIPE_BASIC_PRICE_ID", "")
     if not basic_price_id:
-        checks.append({"name": "Basic Price", "status": "error", "detail": "STRIPE_BASIC_PRICE_ID not set"})
+        checks.append(
+            {
+                "name": "Basic Price",
+                "status": "error",
+                "detail": "STRIPE_BASIC_PRICE_ID not set",
+            }
+        )
     else:
         try:
             price = _stripe.Price.retrieve(basic_price_id, expand=["product"])
             product = price.get("product")
-            product_active = product.get("active", False) if isinstance(product, dict) else "?"
+            product_active = (
+                product.get("active", False) if isinstance(product, dict) else "?"
+            )
             price_live = getattr(price, "livemode", None)
-            mode_match = (price_live and key_mode == "Live") or (not price_live and key_mode == "Test")
+            mode_match = (price_live and key_mode == "Live") or (
+                not price_live and key_mode == "Test"
+            )
             if not product_active:
-                checks.append({"name": "Basic Price", "status": "error", "detail": f"{basic_price_id} — product is NOT active"})
+                checks.append(
+                    {
+                        "name": "Basic Price",
+                        "status": "error",
+                        "detail": f"{basic_price_id} — product is NOT active",
+                    }
+                )
             elif not mode_match:
-                checks.append({"name": "Basic Price", "status": "warn", "detail": f"{basic_price_id} — mode mismatch (price={'Live' if price_live else 'Test'}, key={key_mode})"})
+                checks.append(
+                    {
+                        "name": "Basic Price",
+                        "status": "warn",
+                        "detail": f"{basic_price_id} — mode mismatch (price={'Live' if price_live else 'Test'}, key={key_mode})",
+                    }
+                )
             else:
                 interval = ""
                 if price.recurring:
                     interval = f"/{price.recurring.interval}"
-                checks.append({"name": "Basic Price", "status": "ok", "detail": f"${price.unit_amount / 100:.2f}{interval} — product active"})
+                checks.append(
+                    {
+                        "name": "Basic Price",
+                        "status": "ok",
+                        "detail": f"${price.unit_amount / 100:.2f}{interval} — product active",
+                    }
+                )
         except Exception as e:
-            checks.append({"name": "Basic Price", "status": "error", "detail": f"{basic_price_id} — {e}"})
+            checks.append(
+                {
+                    "name": "Basic Price",
+                    "status": "error",
+                    "detail": f"{basic_price_id} — {e}",
+                }
+            )
 
     # ── 4. Webhook Secret ──
     webhook_secret = current_app.config.get("STRIPE_WEBHOOK_SECRET", "")
     last_event = StripeEvent.query.order_by(StripeEvent.processed_at.desc()).first()
     if not webhook_secret:
-        checks.append({"name": "Webhook Secret", "status": "error", "detail": "STRIPE_WEBHOOK_SECRET not set"})
+        checks.append(
+            {
+                "name": "Webhook Secret",
+                "status": "error",
+                "detail": "STRIPE_WEBHOOK_SECRET not set",
+            }
+        )
     else:
         detail = f"Set (whsec_...{webhook_secret[-6:]})"
         if last_event and last_event.processed_at:
             detail += f" — last event: {last_event.processed_at.strftime('%b %d, %Y %H:%M UTC')}"
         else:
             detail += " — no webhook events received yet"
-        checks.append({"name": "Webhook Secret", "status": "ok" if last_event else "warn", "detail": detail})
+        checks.append(
+            {
+                "name": "Webhook Secret",
+                "status": "ok" if last_event else "warn",
+                "detail": detail,
+            }
+        )
 
     # ── 5. Customer Portal ──
     try:
         configs = _stripe.billing_portal.Configuration.list(limit=1)
         if configs.data:
-            checks.append({"name": "Customer Portal", "status": "ok", "detail": "Portal configuration found"})
+            checks.append(
+                {
+                    "name": "Customer Portal",
+                    "status": "ok",
+                    "detail": "Portal configuration found",
+                }
+            )
         else:
-            checks.append({"name": "Customer Portal", "status": "error", "detail": "No portal configuration — configure at Stripe Dashboard → Billing → Customer Portal"})
+            checks.append(
+                {
+                    "name": "Customer Portal",
+                    "status": "error",
+                    "detail": "No portal configuration — configure at Stripe Dashboard → Billing → Customer Portal",
+                }
+            )
     except Exception as e:
-        checks.append({"name": "Customer Portal", "status": "warn", "detail": f"Could not check: {e}"})
+        checks.append(
+            {
+                "name": "Customer Portal",
+                "status": "warn",
+                "detail": f"Could not check: {e}",
+            }
+        )
 
     # ── 6. Email Config ──
     mail_user = current_app.config.get("MAIL_USERNAME", "")
     mail_pass = current_app.config.get("MAIL_PASSWORD", "")
     if mail_user and mail_pass:
-        checks.append({"name": "Email (SMTP)", "status": "ok", "detail": f"Configured — {mail_user}"})
+        checks.append(
+            {
+                "name": "Email (SMTP)",
+                "status": "ok",
+                "detail": f"Configured — {mail_user}",
+            }
+        )
     else:
         missing = []
         if not mail_user:
             missing.append("MAIL_USERNAME")
         if not mail_pass:
             missing.append("MAIL_PASSWORD")
-        checks.append({"name": "Email (SMTP)", "status": "error", "detail": f"Missing: {', '.join(missing)}"})
+        checks.append(
+            {
+                "name": "Email (SMTP)",
+                "status": "error",
+                "detail": f"Missing: {', '.join(missing)}",
+            }
+        )
 
     # ── Telemetry: Recent webhook events ──
     recent_events = (
-        StripeEvent.query
-        .order_by(StripeEvent.processed_at.desc())
-        .limit(10)
-        .all()
+        StripeEvent.query.order_by(StripeEvent.processed_at.desc()).limit(10).all()
     )
 
-    # ── Telemetry: Subscription summary ──
+    # ── Telemetry: Subscription summary (single query with GROUP BY) ──
+    sub_counts = dict(
+        db.session.query(
+            BillingSubscription.status, db.func.count(BillingSubscription.id)
+        )
+        .group_by(BillingSubscription.status)
+        .all()
+    )
+    sub_counts_active = sub_counts.get("active", 0)
     sub_summary = {
-        "active": BillingSubscription.query.filter_by(status="active", cancel_at_period_end=False).count(),
-        "cancelling": BillingSubscription.query.filter_by(status="active", cancel_at_period_end=True).count(),
-        "past_due": BillingSubscription.query.filter_by(status="past_due").count(),
-        "canceled": BillingSubscription.query.filter_by(status="canceled").count(),
+        "active": BillingSubscription.query.filter_by(
+            status="active", cancel_at_period_end=False
+        ).count(),
+        "cancelling": BillingSubscription.query.filter_by(
+            status="active", cancel_at_period_end=True
+        ).count(),
+        "past_due": sub_counts.get("past_due", 0),
+        "canceled": sub_counts.get("canceled", 0),
         "total_customers": BillingCustomer.query.count(),
     }
+    sub_summary = {
+        "active": sub_counts.get("active", 0),
+        "cancelling": sub_counts.get("active", 0) - sub_counts.get("active", 0),
+        "past_due": sub_counts.get("past_due", 0),
+        "canceled": sub_counts.get("canceled", 0),
+        "total_customers": BillingCustomer.query.count(),
+    }
+    sub_summary["cancelling"] = BillingSubscription.query.filter_by(
+        status="active", cancel_at_period_end=True
+    ).count()
 
     # ── Telemetry: Recent billing audit events ──
     recent_billing_audits = (
-        AuditEvent.query
-        .filter(AuditEvent.action.like("subscription.%") | AuditEvent.action.like("prospect.auto_%"))
+        AuditEvent.query.filter(
+            AuditEvent.action.like("subscription.%")
+            | AuditEvent.action.like("prospect.auto_%")
+        )
         .order_by(AuditEvent.created_at.desc())
         .limit(10)
         .all()
@@ -324,6 +478,7 @@ def stripe_health():
 #  PROSPECTS (Lite CRM)
 # ══════════════════════════════════════════════
 
+
 @admin_bp.route("/prospects")
 @admin_required
 def prospect_list():
@@ -338,8 +493,7 @@ def prospect_list():
 
     # Bulk edit usage for converted prospects
     converted_ws_ids = [
-        p.workspace_id for p in prospects
-        if p.status == "converted" and p.workspace_id
+        p.workspace_id for p in prospects if p.status == "converted" and p.workspace_id
     ]
     edit_usage_map = ticket_service.get_monthly_edit_usage_bulk(converted_ws_ids)
 
@@ -368,13 +522,11 @@ def prospect_new():
 
         if not business_name:
             flash("Business name is required.", "error")
-            return render_template("admin/prospect_new.html",
-                                   form_data=request.form)
+            return render_template("admin/prospect_new.html", form_data=request.form)
 
         if source not in ["google_maps", "facebook", "yelp", "referral", "other"]:
             flash("Please select a valid source.", "error")
-            return render_template("admin/prospect_new.html",
-                                   form_data=request.form)
+            return render_template("admin/prospect_new.html", form_data=request.form)
 
         prospect = Prospect(
             business_name=business_name,
@@ -422,13 +574,15 @@ def prospect_detail(prospect_id):
 
     # Converted prospects → go to workspace page (unified view)
     if prospect.status == "converted" and prospect.workspace_id:
-        return redirect(url_for("admin.workspace_detail",
-                                workspace_id=prospect.workspace_id))
+        return redirect(
+            url_for("admin.workspace_detail", workspace_id=prospect.workspace_id)
+        )
 
     activities = prospect.activities.all()
 
-    return render_template("admin/prospect_detail.html",
-                           prospect=prospect, activities=activities)
+    return render_template(
+        "admin/prospect_detail.html", prospect=prospect, activities=activities
+    )
 
 
 @admin_bp.route("/prospects/<prospect_id>/update", methods=["POST"])
@@ -444,7 +598,9 @@ def prospect_update(prospect_id):
     # Quick-action forms only send status + business_name + source,
     # so we must not blank out fields that aren't in the POST body.
     if "business_name" in request.form:
-        prospect.business_name = request.form["business_name"].strip() or prospect.business_name
+        prospect.business_name = (
+            request.form["business_name"].strip() or prospect.business_name
+        )
     if "contact_name" in request.form:
         prospect.contact_name = request.form["contact_name"].strip() or None
     if "contact_email" in request.form:
@@ -530,7 +686,9 @@ def prospect_send_outreach(prospect_id):
     recipient_email = request.form.get("recipient_email", "").strip()
     custom_message = request.form.get("custom_message", "").strip() or None
     site_slug = request.form.get("site_slug", "").strip().lower()
-    display_name = request.form.get("display_name", "").strip() or prospect.business_name
+    display_name = (
+        request.form.get("display_name", "").strip() or prospect.business_name
+    )
 
     if not recipient_email:
         flash("Recipient email is required.", "error")
@@ -538,7 +696,9 @@ def prospect_send_outreach(prospect_id):
 
     if not site_slug:
         # Auto-generate from business name
-        site_slug = re.sub(r"[^a-z0-9]+", "-", prospect.business_name.lower()).strip("-")
+        site_slug = re.sub(r"[^a-z0-9]+", "-", prospect.business_name.lower()).strip(
+            "-"
+        )
 
     if not site_slug:
         flash("Site slug is required.", "error")
@@ -550,7 +710,10 @@ def prospect_send_outreach(prospect_id):
         # Check slug uniqueness
         existing_site = Site.query.filter_by(site_slug=site_slug).first()
         if existing_site:
-            flash(f"Site slug '{site_slug}' is already taken. Please choose another.", "error")
+            flash(
+                f"Site slug '{site_slug}' is already taken. Please choose another.",
+                "error",
+            )
             return redirect(url_for("admin.prospect_detail", prospect_id=prospect_id))
 
         # 1. Create workspace
@@ -587,28 +750,32 @@ def prospect_send_outreach(prospect_id):
         prospect.workspace_id = workspace.id
 
         # Audit workspace creation
-        db.session.add(AuditEvent(
-            actor_user_id=current_user.id,
-            action="prospect.workspace_created",
-            metadata_={
-                "prospect_id": prospect_id,
-                "workspace_id": workspace.id,
-                "site_id": site.id,
-                "site_slug": site_slug,
-                "reason": "auto — created during outreach email",
-            },
-        ))
+        db.session.add(
+            AuditEvent(
+                actor_user_id=current_user.id,
+                action="prospect.workspace_created",
+                metadata_={
+                    "prospect_id": prospect_id,
+                    "workspace_id": workspace.id,
+                    "site_id": site.id,
+                    "site_slug": site_slug,
+                    "reason": "auto — created during outreach email",
+                },
+            )
+        )
     else:
         # Workspace already exists — find existing invite or create new one
         workspace = db.session.get(Workspace, prospect.workspace_id)
         site = workspace.sites.first() if workspace else None
 
         # Look for a valid existing invite
-        existing_invite = WorkspaceInvite.query.filter_by(
-            workspace_id=workspace.id
-        ).filter(
-            WorkspaceInvite.used_at.is_(None),
-        ).first()
+        existing_invite = (
+            WorkspaceInvite.query.filter_by(workspace_id=workspace.id)
+            .filter(
+                WorkspaceInvite.used_at.is_(None),
+            )
+            .first()
+        )
 
         if existing_invite and existing_invite.is_valid:
             invite = existing_invite
@@ -642,7 +809,8 @@ def prospect_send_outreach(prospect_id):
     activity = ProspectActivity(
         prospect_id=prospect_id,
         activity_type="email",
-        note=f"Outreach email sent to {recipient_email} (with invite link)" + (f": {custom_message[:100]}" if custom_message else ""),
+        note=f"Outreach email sent to {recipient_email} (with invite link)"
+        + (f": {custom_message[:100]}" if custom_message else ""),
         actor_user_id=current_user.id,
     )
     db.session.add(activity)
@@ -651,16 +819,18 @@ def prospect_send_outreach(prospect_id):
     if prospect.status == "site_built":
         old_status = prospect.status
         prospect.status = "pitched"
-        db.session.add(AuditEvent(
-            actor_user_id=current_user.id,
-            action="prospect.status_changed",
-            metadata_={
-                "prospect_id": prospect_id,
-                "old_status": old_status,
-                "new_status": "pitched",
-                "reason": "auto — outreach email sent",
-            },
-        ))
+        db.session.add(
+            AuditEvent(
+                actor_user_id=current_user.id,
+                action="prospect.status_changed",
+                metadata_={
+                    "prospect_id": prospect_id,
+                    "old_status": old_status,
+                    "new_status": "pitched",
+                    "reason": "auto — outreach email sent",
+                },
+            )
+        )
 
     # Audit log
     audit = AuditEvent(
@@ -677,7 +847,10 @@ def prospect_send_outreach(prospect_id):
     db.session.commit()
 
     status_msg = " Status moved to Pitched." if prospect.status == "pitched" else ""
-    flash(f"Outreach email sent to {recipient_email} with demo link and portal invite.{status_msg}", "success")
+    flash(
+        f"Outreach email sent to {recipient_email} with demo link and portal invite.{status_msg}",
+        "success",
+    )
     return redirect(url_for("admin.prospect_detail", prospect_id=prospect_id))
 
 
@@ -728,9 +901,11 @@ def prospect_convert(prospect_id):
             db.session.flush()
 
             # Ensure an invite exists
-            existing_invite = WorkspaceInvite.query.filter_by(
-                workspace_id=workspace.id
-            ).filter(WorkspaceInvite.used_at.is_(None)).first()
+            existing_invite = (
+                WorkspaceInvite.query.filter_by(workspace_id=workspace.id)
+                .filter(WorkspaceInvite.used_at.is_(None))
+                .first()
+            )
 
             if existing_invite and existing_invite.is_valid:
                 invite = existing_invite
@@ -745,15 +920,21 @@ def prospect_convert(prospect_id):
             # Validation
             if not site_slug:
                 flash("Site slug is required.", "error")
-                return render_template("admin/workspace_convert.html",
-                                       prospect=prospect, form_data=request.form)
+                return render_template(
+                    "admin/workspace_convert.html",
+                    prospect=prospect,
+                    form_data=request.form,
+                )
 
             # Check slug uniqueness
             existing_site = Site.query.filter_by(site_slug=site_slug).first()
             if existing_site:
                 flash(f"Site slug '{site_slug}' is already taken.", "error")
-                return render_template("admin/workspace_convert.html",
-                                       prospect=prospect, form_data=request.form)
+                return render_template(
+                    "admin/workspace_convert.html",
+                    prospect=prospect,
+                    form_data=request.form,
+                )
 
             # 1. Create workspace
             workspace = Workspace(
@@ -819,48 +1000,83 @@ def prospect_convert(prospect_id):
             recipient_email=invite_email or prospect.contact_email,
         )
 
-    return render_template("admin/workspace_convert.html",
-                           prospect=prospect, form_data={})
+    return render_template(
+        "admin/workspace_convert.html", prospect=prospect, form_data={}
+    )
 
 
 # ══════════════════════════════════════════════
 #  WORKSPACES
 # ══════════════════════════════════════════════
 
+
 @admin_bp.route("/workspaces")
 @admin_required
 def workspace_list():
     """List all workspaces with subscription status and invite info."""
+    from sqlalchemy.orm import joinedload
+
     workspaces = Workspace.query.order_by(Workspace.created_at.desc()).all()
+    ws_ids = [ws.id for ws in workspaces]
+
+    # Batch fetch all related data in bulk queries
+    # Sites
+    sites = {
+        s.workspace_id: s
+        for s in Site.query.filter(Site.workspace_id.in_(ws_ids)).all()
+    }
+
+    # Subscriptions (latest per workspace) - use subquery for cross-database compatibility
+    from sqlalchemy import func as sql_func
+    from sqlalchemy import select
+
+    latest_sub_ids = (
+        db.session.query(sql_func.max(BillingSubscription.id).label("max_id"))
+        .filter(BillingSubscription.workspace_id.in_(ws_ids))
+        .group_by(BillingSubscription.workspace_id)
+        .subquery()
+    )
+    latest_subs = BillingSubscription.query.filter(
+        BillingSubscription.id.in_(select(latest_sub_ids))
+    ).all()
+    subs = {s.workspace_id: s for s in latest_subs}
+
+    # Latest invites - use subquery for cross-database compatibility
+    latest_invite_ids = (
+        db.session.query(sql_func.max(WorkspaceInvite.id).label("max_id"))
+        .filter(WorkspaceInvite.workspace_id.in_(ws_ids))
+        .group_by(WorkspaceInvite.workspace_id)
+        .subquery()
+    )
+    latest_invites = WorkspaceInvite.query.filter(
+        WorkspaceInvite.id.in_(select(latest_invite_ids))
+    ).all()
+    invites = {inv.workspace_id: inv for inv in latest_invites}
+
+    # Member counts
+    member_counts = dict(
+        db.session.query(
+            WorkspaceMember.workspace_id, sql_func.count(WorkspaceMember.id)
+        )
+        .filter(WorkspaceMember.workspace_id.in_(ws_ids))
+        .group_by(WorkspaceMember.workspace_id)
+        .all()
+    )
 
     # Build enriched data for each workspace
     workspace_data = []
     for ws in workspaces:
-        site = ws.sites.first()
-        sub = (
-            BillingSubscription.query
-            .filter_by(workspace_id=ws.id)
-            .order_by(BillingSubscription.created_at.desc())
-            .first()
+        workspace_data.append(
+            {
+                "workspace": ws,
+                "site": sites.get(ws.id),
+                "subscription": subs.get(ws.id),
+                "latest_invite": invites.get(ws.id),
+                "member_count": member_counts.get(ws.id, 0),
+            }
         )
-        # Latest invite
-        latest_invite = (
-            WorkspaceInvite.query
-            .filter_by(workspace_id=ws.id)
-            .order_by(WorkspaceInvite.created_at.desc())
-            .first()
-        )
-        member_count = ws.members.count()
-        workspace_data.append({
-            "workspace": ws,
-            "site": site,
-            "subscription": sub,
-            "latest_invite": latest_invite,
-            "member_count": member_count,
-        })
 
     # Bulk edit usage for all workspaces
-    ws_ids = [ws.id for ws in workspaces]
     edit_usage_map = ticket_service.get_monthly_edit_usage_bulk(ws_ids)
 
     return render_template(
@@ -882,35 +1098,37 @@ def workspace_detail(workspace_id):
     site = workspace.sites.first()
     members = workspace.members.all()
 
-    # Enrich members with user info
-    member_data = []
-    for m in members:
-        user = db.session.get(User, m.user_id)
-        member_data.append({"member": m, "user": user})
+    # Enrich members with user info - batch fetch all users at once
+    user_ids = [m.user_id for m in members]
+    users = (
+        {u.id: u for u in User.query.filter(User.id.in_(user_ids)).all()}
+        if user_ids
+        else {}
+    )
+    member_data = [{"member": m, "user": users.get(m.user_id)} for m in members]
 
     # Subscription
     subscription = (
-        BillingSubscription.query
-        .filter_by(workspace_id=workspace_id)
+        BillingSubscription.query.filter_by(workspace_id=workspace_id)
         .order_by(BillingSubscription.created_at.desc())
         .first()
     )
 
     # Billing customer
-    billing_customer = BillingCustomer.query.filter_by(workspace_id=workspace_id).first()
+    billing_customer = BillingCustomer.query.filter_by(
+        workspace_id=workspace_id
+    ).first()
 
     # Invites
     invites = (
-        WorkspaceInvite.query
-        .filter_by(workspace_id=workspace_id)
+        WorkspaceInvite.query.filter_by(workspace_id=workspace_id)
         .order_by(WorkspaceInvite.created_at.desc())
         .all()
     )
 
     # Tickets
     tickets = (
-        Ticket.query
-        .filter_by(workspace_id=workspace_id)
+        Ticket.query.filter_by(workspace_id=workspace_id)
         .order_by(Ticket.last_activity_at.desc())
         .limit(10)
         .all()
@@ -997,13 +1215,18 @@ def workspace_settings_update(workspace_id):
 
     # Notification prefs (stored in JSON)
     notification_prefs = {}
-    notification_prefs["ticket_replies"] = request.form.get("notify_ticket_replies") == "on"
-    notification_prefs["billing_events"] = request.form.get("notify_billing_events") == "on"
+    notification_prefs["ticket_replies"] = (
+        request.form.get("notify_ticket_replies") == "on"
+    )
+    notification_prefs["billing_events"] = (
+        request.form.get("notify_billing_events") == "on"
+    )
     notification_prefs["site_updates"] = request.form.get("notify_site_updates") == "on"
     settings.notification_prefs = notification_prefs
 
     # Force SQLAlchemy to detect JSON changes
     from sqlalchemy.orm.attributes import flag_modified
+
     flag_modified(settings, "plan_features")
     flag_modified(settings, "notification_prefs")
 
@@ -1021,7 +1244,9 @@ def workspace_settings_update(workspace_id):
     db.session.commit()
 
     flash("Workspace settings updated.", "success")
-    return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id, tab="settings"))
+    return redirect(
+        url_for("admin.workspace_detail", workspace_id=workspace_id, tab="settings")
+    )
 
 
 @admin_bp.route("/workspaces/<workspace_id>/site", methods=["POST"])
@@ -1057,7 +1282,9 @@ def workspace_site_update(workspace_id):
     db.session.commit()
 
     flash("Site settings updated.", "success")
-    return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id, tab="site"))
+    return redirect(
+        url_for("admin.workspace_detail", workspace_id=workspace_id, tab="site")
+    )
 
 
 @admin_bp.route("/workspaces/<workspace_id>/prospect", methods=["POST"])
@@ -1078,7 +1305,9 @@ def workspace_prospect_update(workspace_id):
         return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id))
 
     # Update prospect fields
-    prospect.business_name = request.form.get("business_name", prospect.business_name).strip()
+    prospect.business_name = request.form.get(
+        "business_name", prospect.business_name
+    ).strip()
     prospect.contact_name = request.form.get("contact_name", "").strip() or None
     prospect.contact_email = request.form.get("contact_email", "").strip() or None
     prospect.contact_phone = request.form.get("contact_phone", "").strip() or None
@@ -1093,7 +1322,9 @@ def workspace_prospect_update(workspace_id):
     db.session.commit()
 
     flash("Business info updated.", "success")
-    return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id, tab="business"))
+    return redirect(
+        url_for("admin.workspace_detail", workspace_id=workspace_id, tab="business")
+    )
 
 
 @admin_bp.route("/workspaces/<workspace_id>/invite", methods=["POST"])
@@ -1212,6 +1443,7 @@ def send_invite_email(workspace_id):
 # ══════════════════════════════════════════════
 #  TICKETS (Admin view)
 # ══════════════════════════════════════════════
+
 
 @admin_bp.route("/tickets")
 @admin_required
@@ -1370,7 +1602,9 @@ def ticket_assign(ticket_id):
         db.session.commit()
         if assigned_to:
             assignee = db.session.get(User, assigned_to)
-            flash(f"Ticket assigned to {assignee.full_name or assignee.email}.", "success")
+            flash(
+                f"Ticket assigned to {assignee.full_name or assignee.email}.", "success"
+            )
         else:
             flash("Ticket unassigned.", "success")
     except ValueError as e:
@@ -1400,6 +1634,7 @@ def ticket_category(ticket_id):
 #  SITE STATUS OVERRIDE
 # ══════════════════════════════════════════════
 
+
 @admin_bp.route("/sites/<site_id>/status", methods=["POST"])
 @admin_required
 def site_status_override(site_id):
@@ -1412,7 +1647,9 @@ def site_status_override(site_id):
     new_status = request.form.get("status", "").strip()
     if new_status not in Site.STATUSES:
         flash(f"Invalid site status '{new_status}'.", "error")
-        return redirect(url_for("admin.workspace_detail", workspace_id=site.workspace_id))
+        return redirect(
+            url_for("admin.workspace_detail", workspace_id=site.workspace_id)
+        )
 
     old_status = site.status
     site.status = new_status
@@ -1438,6 +1675,7 @@ def site_status_override(site_id):
 #  CONTACT FORM RELAY
 # ══════════════════════════════════════════════
 
+
 @admin_bp.route("/workspaces/<workspace_id>/contact-form", methods=["POST"])
 @admin_required
 def contact_form_upsert(workspace_id):
@@ -1457,7 +1695,10 @@ def contact_form_upsert(workspace_id):
     raw_emails = request.form.get("recipient_emails", "").strip()
     if not raw_emails:
         flash("At least one recipient email is required.", "error")
-        return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id) + "?tab=contact_form")
+        return redirect(
+            url_for("admin.workspace_detail", workspace_id=workspace_id)
+            + "?tab=contact_form"
+        )
 
     # Validate each email
     email_re = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -1465,11 +1706,17 @@ def contact_form_upsert(workspace_id):
     invalid = [e for e in emails if not email_re.match(e)]
     if invalid:
         flash(f"Invalid email(s): {', '.join(invalid)}", "error")
-        return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id) + "?tab=contact_form")
+        return redirect(
+            url_for("admin.workspace_detail", workspace_id=workspace_id)
+            + "?tab=contact_form"
+        )
 
     if not emails:
         flash("At least one valid recipient email is required.", "error")
-        return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id) + "?tab=contact_form")
+        return redirect(
+            url_for("admin.workspace_detail", workspace_id=workspace_id)
+            + "?tab=contact_form"
+        )
 
     config = ContactFormConfig.query.filter_by(site_id=site.id).first()
 
@@ -1516,7 +1763,10 @@ def contact_form_upsert(workspace_id):
 
         flash("Recipient emails updated.", "success")
 
-    return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id) + "?tab=contact_form")
+    return redirect(
+        url_for("admin.workspace_detail", workspace_id=workspace_id)
+        + "?tab=contact_form"
+    )
 
 
 @admin_bp.route("/workspaces/<workspace_id>/contact-form/toggle", methods=["POST"])
@@ -1536,7 +1786,10 @@ def contact_form_toggle(workspace_id):
     config = ContactFormConfig.query.filter_by(site_id=site.id).first()
     if config is None:
         flash("No contact form config found. Create one first.", "error")
-        return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id) + "?tab=contact_form")
+        return redirect(
+            url_for("admin.workspace_detail", workspace_id=workspace_id)
+            + "?tab=contact_form"
+        )
 
     config.is_enabled = not config.is_enabled
     new_state = "enabled" if config.is_enabled else "disabled"
@@ -1551,7 +1804,10 @@ def contact_form_toggle(workspace_id):
     db.session.commit()
 
     flash(f"Contact form relay {new_state}.", "success")
-    return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id) + "?tab=contact_form")
+    return redirect(
+        url_for("admin.workspace_detail", workspace_id=workspace_id)
+        + "?tab=contact_form"
+    )
 
 
 @admin_bp.route("/workspaces/<workspace_id>/contact-form/regenerate", methods=["POST"])
@@ -1571,7 +1827,10 @@ def contact_form_regenerate(workspace_id):
     config = ContactFormConfig.query.filter_by(site_id=site.id).first()
     if config is None:
         flash("No contact form config found. Create one first.", "error")
-        return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id) + "?tab=contact_form")
+        return redirect(
+            url_for("admin.workspace_detail", workspace_id=workspace_id)
+            + "?tab=contact_form"
+        )
 
     old_key = config.access_key
     config.access_key = ContactFormConfig.generate_access_key()
@@ -1588,5 +1847,11 @@ def contact_form_regenerate(workspace_id):
     db.session.add(audit)
     db.session.commit()
 
-    flash("Access key regenerated. Update the HTML on the client's website with the new embed code.", "success")
-    return redirect(url_for("admin.workspace_detail", workspace_id=workspace_id) + "?tab=contact_form")
+    flash(
+        "Access key regenerated. Update the HTML on the client's website with the new embed code.",
+        "success",
+    )
+    return redirect(
+        url_for("admin.workspace_detail", workspace_id=workspace_id)
+        + "?tab=contact_form"
+    )

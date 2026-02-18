@@ -37,6 +37,7 @@ portal_bp = Blueprint("portal", __name__)
 # GET /<site_slug>/ — redirect to dashboard or login
 # ──────────────────────────────────────────────
 
+
 @portal_bp.route("/<site_slug>/")
 def portal_root(site_slug):
     """Root portal URL — redirect to dashboard."""
@@ -49,6 +50,7 @@ def portal_root(site_slug):
 # GET /<site_slug>/dashboard
 # ──────────────────────────────────────────────
 
+
 @portal_bp.route("/<site_slug>/dashboard")
 @login_required_for_site
 def dashboard(site_slug):
@@ -60,9 +62,9 @@ def dashboard(site_slug):
     # (the webhook may have arrived between the redirect and this request)
     if access == "subscribe" and request.args.get("from") == "checkout":
         from app.models.billing import BillingSubscription
+
         fresh_sub = (
-            BillingSubscription.query
-            .filter_by(workspace_id=g.workspace_id)
+            BillingSubscription.query.filter_by(workspace_id=g.workspace_id)
             .order_by(BillingSubscription.created_at.desc())
             .first()
         )
@@ -80,20 +82,25 @@ def dashboard(site_slug):
 
     # Full or read_only — show dashboard
     recent_tickets = (
-        Ticket.query
-        .filter_by(workspace_id=g.workspace_id)
+        Ticket.query.filter_by(workspace_id=g.workspace_id)
         .order_by(Ticket.last_activity_at.desc())
         .limit(5)
         .all()
     )
 
-    # Workspace team members
+    # Workspace team members - batch fetch all users at once
     members = WorkspaceMember.query.filter_by(workspace_id=g.workspace_id).all()
-    team_members = []
-    for m in members:
-        user = db.session.get(User, m.user_id)
-        if user:
-            team_members.append({"user": user, "member": m})
+    user_ids = [m.user_id for m in members]
+    users = (
+        {u.id: u for u in User.query.filter(User.id.in_(user_ids)).all()}
+        if user_ids
+        else {}
+    )
+    team_members = [
+        {"user": users.get(m.user_id), "member": m}
+        for m in members
+        if users.get(m.user_id)
+    ]
 
     return render_template(
         "portal/dashboard.html",
@@ -105,6 +112,7 @@ def dashboard(site_slug):
 # ──────────────────────────────────────────────
 # TICKETS
 # ──────────────────────────────────────────────
+
 
 @portal_bp.route("/<site_slug>/tickets")
 @login_required_for_site
@@ -176,7 +184,9 @@ def ticket_new(site_slug):
             db.session.commit()
 
             # Email notification to admin
-            admin_email = current_app.config.get("MAIL_CONTACT_TO", "info@belvieudigital.com")
+            admin_email = current_app.config.get(
+                "MAIL_CONTACT_TO", "info@belvieudigital.com"
+            )
             base_url = current_app.config["APP_BASE_URL"]
             send_email(
                 to=admin_email,
@@ -196,7 +206,9 @@ def ticket_new(site_slug):
 
             flash("Ticket created successfully.", "success")
             return redirect(
-                url_for("portal.ticket_detail", site_slug=site_slug, ticket_id=ticket.id)
+                url_for(
+                    "portal.ticket_detail", site_slug=site_slug, ticket_id=ticket.id
+                )
             )
         except ValueError as e:
             flash(str(e), "error")
@@ -276,7 +288,9 @@ def ticket_reply(site_slug, ticket_id):
         db.session.commit()
 
         # Email notification to admin
-        admin_email = current_app.config.get("MAIL_CONTACT_TO", "info@belvieudigital.com")
+        admin_email = current_app.config.get(
+            "MAIL_CONTACT_TO", "info@belvieudigital.com"
+        )
         base_url = current_app.config["APP_BASE_URL"]
         send_email(
             to=admin_email,
