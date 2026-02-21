@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if is_edit else 'New' }} Pitch Template — Belvieu Digital{% endblock %}
+
+{% block content %}
+{% include 'admin/_nav.html' %}
+
+<div class="breadcrumb">
+    <a href="{{ url_for('admin.pitch_template_list') }}">Pitches</a>
+    <span class="breadcrumb-sep">/</span>
+    <span>{{ 'Edit' if is_edit else 'New' }}</span>
+</div>
+
+<div class="page-header">
+    <h1>{{ 'Edit' if is_edit else 'Create' }} Pitch Template</h1>
+    <p>Write your outreach message and use <code>{% raw %}{{business_name}}{% endraw %}</code>, <code>{% raw %}{{demo_url}}{% endraw %}</code>, etc. to auto-fill prospect info.</p>
+</div>
+
+<div class="content-grid-detail">
+    <div>
+        <div class="card">
+            <form method="POST" action="{{ url_for('admin.pitch_template_edit', template_id=template.id) if is_edit else url_for('admin.pitch_template_new') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-group">
+                    <label for="name">Template Name *</label>
+                    <input type="text" id="name" name="name" class="form-control"
+                           value="{{ form_data.get('name', '') }}"
+                           placeholder="e.g. Casual Intro, FB Message, Follow-up" required>
+                    <span class="form-hint">A short label for your reference</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="category">Category *</label>
+                    <select id="category" name="category" class="form-control">
+                        <option value="initial" {{ 'selected' if form_data.get('category', 'initial') == 'initial' }}>Initial Pitch</option>
+                        <option value="followup" {{ 'selected' if form_data.get('category') == 'followup' }}>Follow-up</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="body">Message Body *</label>
+                    {% raw %}
+                    <textarea id="body" name="body" class="form-control" rows="12"
+                              placeholder="Hey! I'm Chris, I live out here in Mont Belvieu. Was trying to find {{business_name}} online the other day..."
+                              required>{% endraw %}{{ form_data.get('body', '') }}</textarea>
+                    <span class="form-hint">Use variables like <code>{% raw %}{{business_name}}{% endraw %}</code>, <code>{% raw %}{{demo_url}}{% endraw %}</code>, <code>{% raw %}{{my_phone}}{% endraw %}</code></span>
+                </div>
+
+                <div class="flex gap-1">
+                    <button type="submit" class="btn btn-primary">{{ 'Save Changes' if is_edit else 'Create Template' }}</button>
+                    <a href="{{ url_for('admin.pitch_template_list') }}" class="btn btn-ghost">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div>
+        <div class="card">
+            <div class="card-header">Preview</div>
+            <p class="text-sm text-muted mb-1">Live preview with sample data:</p>
+            <div id="pitch-preview" class="pitch-preview-box">
+                <span class="text-muted">Start typing to see preview...</span>
+            </div>
+        </div>
+
+        <div class="card mt-2">
+            <div class="card-header">Variables</div>
+            {% raw %}
+            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                <button type="button" class="btn btn-sm btn-ghost btn-full" onclick="insertVar('{{business_name}}')" style="text-align: left; justify-content: flex-start;"><code>{{business_name}}</code></button>
+                <button type="button" class="btn btn-sm btn-ghost btn-full" onclick="insertVar('{{demo_url}}')" style="text-align: left; justify-content: flex-start;"><code>{{demo_url}}</code></button>
+                <button type="button" class="btn btn-sm btn-ghost btn-full" onclick="insertVar('{{contact_name}}')" style="text-align: left; justify-content: flex-start;"><code>{{contact_name}}</code></button>
+                <button type="button" class="btn btn-sm btn-ghost btn-full" onclick="insertVar('{{first_name}}')" style="text-align: left; justify-content: flex-start;"><code>{{first_name}}</code></button>
+                <button type="button" class="btn btn-sm btn-ghost btn-full" onclick="insertVar('{{my_phone}}')" style="text-align: left; justify-content: flex-start;"><code>{{my_phone}}</code></button>
+                <button type="button" class="btn btn-sm btn-ghost btn-full" onclick="insertVar('{{portal_url}}')" style="text-align: left; justify-content: flex-start;"><code>{{portal_url}}</code></button>
+            </div>
+            {% endraw %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+{% raw %}
+const sampleData = {
+    '{{business_name}}': "Joe's Auto Shop",
+    '{{demo_url}}': 'https://joes-auto-shop.pages.dev/',
+    '{{contact_name}}': 'Joe Martinez',
+    '{{first_name}}': 'Joe',
+    '{{my_phone}}': '(713) 725-4459',
+    '{{portal_url}}': 'https://portal.belvieudigital.com'
+};
+{% endraw %}
+
+const bodyEl = document.getElementById('body');
+const previewEl = document.getElementById('pitch-preview');
+
+function updatePreview() {
+    let text = bodyEl.value;
+    if (!text.trim()) {
+        previewEl.innerHTML = '<span class="text-muted">Start typing to see preview...</span>';
+        return;
+    }
+    for (const [key, val] of Object.entries(sampleData)) {
+        text = text.split(key).join('<strong>' + val + '</strong>');
+    }
+    previewEl.innerHTML = text.replace(/\n/g, '<br>');
+}
+
+bodyEl.addEventListener('input', updatePreview);
+updatePreview();
+
+function insertVar(variable) {
+    const start = bodyEl.selectionStart;
+    const end = bodyEl.selectionEnd;
+    const before = bodyEl.value.substring(0, start);
+    const after = bodyEl.value.substring(end);
+    bodyEl.value = before + variable + after;
+    bodyEl.selectionStart = bodyEl.selectionEnd = start + variable.length;
+    bodyEl.focus();
+    updatePreview();
+}
+</script>
+{% endblock %}

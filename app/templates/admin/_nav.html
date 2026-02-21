@@ -4,7 +4,9 @@
     <a href="{{ url_for('admin.dashboard') }}"
        class="admin-subnav-link {% if ep == 'admin.dashboard' %}active{% endif %}">Dashboard</a>
     <a href="{{ url_for('admin.prospect_list') }}"
-       class="admin-subnav-link {% if 'prospect' in ep and 'workspace_prospect' not in ep %}active{% endif %}">Prospects</a>
+       class="admin-subnav-link {% if 'prospect' in ep and 'workspace_prospect' not in ep and 'pitch' not in ep %}active{% endif %}">Prospects</a>
+    <a href="{{ url_for('admin.pitch_template_list') }}"
+       class="admin-subnav-link {% if 'pitch' in ep %}active{% endif %}">Pitches</a>
     <a href="{{ url_for('admin.workspace_list') }}"
        class="admin-subnav-link {% if 'workspace' in ep or 'site_status' in ep or 'invite' in ep %}active{% endif %}">Workspaces</a>
     <a href="{{ url_for('admin.ticket_list') }}"

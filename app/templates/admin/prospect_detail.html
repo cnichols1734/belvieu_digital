@@ -30,7 +30,7 @@
             </p>
         </div>
         <div class="flex gap-1">
-            {% if prospect.status in ('site_built', 'pitched', 'researching') %}
+            {% if prospect.status in ('researching', 'site_built', 'pitched') %}
                 <a href="{{ url_for('admin.prospect_convert', prospect_id=prospect.id) }}" class="btn btn-primary">
                     Convert to Client
                 </a>
@@ -48,8 +48,9 @@
 {% set stages = ['researching', 'site_built', 'pitched', 'converted'] %}
 {% set stage_order = {'researching': 0, 'site_built': 1, 'pitched': 2, 'converted': 3} %}
 {% set current_idx = stage_order.get(prospect.status, -1) %}
+{% set exit_statuses = ['declined', 'withdrawn', 'closed_business', 'on_hold'] %}
 
-{% if prospect.status != 'declined' %}
+{% if prospect.status not in exit_statuses %}
 <div class="pipeline-steps">
     {% for stage in stages %}
     {% set idx = loop.index0 %}
@@ -64,9 +65,9 @@
 </div>
 {% else %}
 <div class="pipeline-steps">
-    <div class="pipeline-step declined">
+    <div class="pipeline-step {{ prospect.status }}">
         <span class="pipeline-step-dot"></span>
-        <span>Declined</span>
+        <span>{{ prospect.status | replace('_', ' ') | title }}</span>
     </div>
 </div>
 {% endif %}
@@ -203,9 +204,16 @@
                 <div class="form-group">
                     <label for="status">Status</label>
                     <select id="status" name="status" class="form-control">
-                        {% for s in ['researching', 'site_built', 'pitched', 'converted', 'declined'] %}
-                        <option value="{{ s }}" {{ 'selected' if prospect.status == s }}>{{ s | replace('_', ' ') | title }}</option>
-                        {% endfor %}
+                        <optgroup label="Active Pipeline">
+                            {% for s in ['researching', 'site_built', 'pitched', 'converted'] %}
+                            <option value="{{ s }}" {{ 'selected' if prospect.status == s }}>{{ s | replace('_', ' ') | title }}</option>
+                            {% endfor %}
+                        </optgroup>
+                        <optgroup label="Exited">
+                            {% for s in ['declined', 'withdrawn', 'closed_business', 'on_hold'] %}
+                            <option value="{{ s }}" {{ 'selected' if prospect.status == s }}>{{ s | replace('_', ' ') | title }}</option>
+                            {% endfor %}
+                        </optgroup>
                     </select>
                 </div>
 
@@ -272,7 +280,8 @@
     {# ── Right Column: Actions + Links ── #}
     <div>
         {# Pipeline Actions #}
-        {% if prospect.status != 'converted' and prospect.status != 'declined' %}
+        {% set exit_statuses = ['converted', 'declined', 'withdrawn', 'closed_business', 'on_hold'] %}
+        {% if prospect.status not in exit_statuses %}
         <div class="card mb-2">
             <div class="card-header">Next Step</div>
 
@@ -302,14 +311,38 @@
             {% endif %}
 
             <hr class="divider">
+            <p class="text-xs text-muted mb-1" style="font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Exit Pipeline</p>
 
-            <form method="POST" action="{{ url_for('admin.prospect_update', prospect_id=prospect.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="status" value="declined">
-                <input type="hidden" name="business_name" value="{{ prospect.business_name }}">
-                <input type="hidden" name="source" value="{{ prospect.source }}">
-                <button type="submit" class="btn btn-ghost btn-full btn-sm">Mark as Declined</button>
-            </form>
+            <div style="display: flex; flex-direction: column; gap: 0.375rem;">
+                <form method="POST" action="{{ url_for('admin.prospect_update', prospect_id=prospect.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="status" value="declined">
+                    <input type="hidden" name="business_name" value="{{ prospect.business_name }}">
+                    <input type="hidden" name="source" value="{{ prospect.source }}">
+                    <button type="submit" class="btn btn-ghost btn-full btn-sm">Prospect Declined</button>
+                </form>
+                <form method="POST" action="{{ url_for('admin.prospect_update', prospect_id=prospect.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="status" value="withdrawn">
+                    <input type="hidden" name="business_name" value="{{ prospect.business_name }}">
+                    <input type="hidden" name="source" value="{{ prospect.source }}">
+                    <button type="submit" class="btn btn-ghost btn-full btn-sm">I'm No Longer Interested</button>
+                </form>
+                <form method="POST" action="{{ url_for('admin.prospect_update', prospect_id=prospect.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="status" value="closed_business">
+                    <input type="hidden" name="business_name" value="{{ prospect.business_name }}">
+                    <input type="hidden" name="source" value="{{ prospect.source }}">
+                    <button type="submit" class="btn btn-ghost btn-full btn-sm">Business Is Closed</button>
+                </form>
+                <form method="POST" action="{{ url_for('admin.prospect_update', prospect_id=prospect.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="status" value="on_hold">
+                    <input type="hidden" name="business_name" value="{{ prospect.business_name }}">
+                    <input type="hidden" name="source" value="{{ prospect.source }}">
+                    <button type="submit" class="btn btn-ghost btn-full btn-sm">Put On Hold</button>
+                </form>
+            </div>
         </div>
         {% endif %}
 
@@ -403,6 +436,61 @@
         <p class="text-sm text-muted" style="padding: 0.5rem 0;">No activity logged yet.</p>
     {% endif %}
 </div>
+
+{# ── Pitch Templates ── #}
+{% if pitch_templates %}
+<div class="mt-3">
+    <div class="page-header-row" style="margin-bottom: 0.75rem;">
+        <h2 style="font-size: 1.125rem;">Outreach Pitches</h2>
+        <a href="{{ url_for('admin.pitch_template_list') }}" class="btn btn-sm btn-ghost">Manage Templates</a>
+    </div>
+
+    {% set initial = pitch_templates | selectattr('category', 'equalto', 'initial') | list %}
+    {% set followup = pitch_templates | selectattr('category', 'equalto', 'followup') | list %}
+
+    {% if initial %}
+    <p class="text-xs text-muted mb-1" style="font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Initial</p>
+    <div class="pitch-cards-grid mb-2">
+        {% for t in initial %}
+        <div class="card pitch-card">
+            <div class="card-header">
+                <span class="font-medium text-sm">{{ t.name }}</span>
+                <button type="button"
+                        class="btn btn-sm btn-secondary pitch-copy-btn"
+                        data-pitch-id="pitch-{{ t.id }}"
+                        onclick="copyPitch(this)">
+                    <svg style="width: 14px; height: 14px;" viewBox="0 0 20 20" fill="currentColor"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/></svg>
+                    Copy
+                </button>
+            </div>
+            <div class="pitch-card-body" id="pitch-{{ t.id }}">{{ t.render(prospect, portal_url) }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if followup %}
+    <p class="text-xs text-muted mb-1" style="font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Follow-up</p>
+    <div class="pitch-cards-grid mb-2">
+        {% for t in followup %}
+        <div class="card pitch-card">
+            <div class="card-header">
+                <span class="font-medium text-sm">{{ t.name }}</span>
+                <button type="button"
+                        class="btn btn-sm btn-secondary pitch-copy-btn"
+                        data-pitch-id="pitch-{{ t.id }}"
+                        onclick="copyPitch(this)">
+                    <svg style="width: 14px; height: 14px;" viewBox="0 0 20 20" fill="currentColor"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/></svg>
+                    Copy
+                </button>
+            </div>
+            <div class="pitch-card-body" id="pitch-{{ t.id }}">{{ t.render(prospect, portal_url) }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -410,6 +498,22 @@
 function toggleProspectEdit(show) {
     document.getElementById('prospect-view').style.display = show ? 'none' : 'block';
     document.getElementById('prospect-edit').style.display = show ? 'block' : 'none';
+}
+
+function copyPitch(btn) {
+    var id = btn.getAttribute('data-pitch-id');
+    var el = document.getElementById(id);
+    if (!el) return;
+    var text = el.innerText || el.textContent;
+    navigator.clipboard.writeText(text).then(function() {
+        var orig = btn.innerHTML;
+        btn.innerHTML = '<svg style="width: 14px; height: 14px;" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Copied!';
+        btn.classList.add('pitch-copy-success');
+        setTimeout(function() {
+            btn.innerHTML = orig;
+            btn.classList.remove('pitch-copy-success');
+        }, 2000);
+    });
 }
 </script>
 {% endblock %}

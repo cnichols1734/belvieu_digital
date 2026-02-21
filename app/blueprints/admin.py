@@ -48,6 +48,7 @@ from app.services import invite_service, ticket_service
 from app.services.email_service import send_email
 from app.models.prospect_activity import ProspectActivity
 from app.models.contact_form import ContactFormConfig
+from app.models.pitch_template import PitchTemplate
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -587,8 +588,21 @@ def prospect_detail(prospect_id):
 
     activities = prospect.activities.all()
 
+    pitch_templates = (
+        PitchTemplate.query
+        .filter_by(is_active=True)
+        .order_by(PitchTemplate.category, PitchTemplate.created_at)
+        .all()
+    )
+
+    portal_url = current_app.config.get("APP_BASE_URL", "https://portal.belvieudigital.com")
+
     return render_template(
-        "admin/prospect_detail.html", prospect=prospect, activities=activities
+        "admin/prospect_detail.html",
+        prospect=prospect,
+        activities=activities,
+        pitch_templates=pitch_templates,
+        portal_url=portal_url,
     )
 
 
@@ -1010,6 +1024,139 @@ def prospect_convert(prospect_id):
     return render_template(
         "admin/workspace_convert.html", prospect=prospect, form_data={}
     )
+
+
+# ══════════════════════════════════════════════
+#  PITCH TEMPLATES
+# ══════════════════════════════════════════════
+
+
+@admin_bp.route("/pitch-templates")
+@admin_required
+def pitch_template_list():
+    """List all pitch templates with active/inactive status."""
+    templates = PitchTemplate.query.order_by(
+        PitchTemplate.category, PitchTemplate.created_at.desc()
+    ).all()
+    return render_template("admin/pitch_templates.html", templates=templates)
+
+
+@admin_bp.route("/pitch-templates/new", methods=["GET", "POST"])
+@admin_required
+def pitch_template_new():
+    """Create a new pitch template."""
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        body = request.form.get("body", "").strip()
+        category = request.form.get("category", "initial").strip()
+
+        if not name or not body:
+            flash("Name and body are required.", "error")
+            return render_template(
+                "admin/pitch_template_form.html",
+                form_data=request.form,
+                is_edit=False,
+            )
+
+        if category not in PitchTemplate.CATEGORIES:
+            category = "initial"
+
+        template = PitchTemplate(
+            name=name,
+            body=body,
+            category=category,
+            is_active=True,
+        )
+        db.session.add(template)
+        db.session.commit()
+
+        flash(f"Pitch template '{name}' created.", "success")
+        return redirect(url_for("admin.pitch_template_list"))
+
+    return render_template(
+        "admin/pitch_template_form.html", form_data={}, is_edit=False
+    )
+
+
+@admin_bp.route("/pitch-templates/<template_id>/edit", methods=["GET", "POST"])
+@admin_required
+def pitch_template_edit(template_id):
+    """Edit an existing pitch template."""
+    template = db.session.get(PitchTemplate, template_id)
+    if template is None:
+        flash("Pitch template not found.", "error")
+        return redirect(url_for("admin.pitch_template_list"))
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        body = request.form.get("body", "").strip()
+        category = request.form.get("category", "initial").strip()
+
+        if not name or not body:
+            flash("Name and body are required.", "error")
+            return render_template(
+                "admin/pitch_template_form.html",
+                form_data=request.form,
+                template=template,
+                is_edit=True,
+            )
+
+        if category not in PitchTemplate.CATEGORIES:
+            category = "initial"
+
+        template.name = name
+        template.body = body
+        template.category = category
+        db.session.commit()
+
+        flash(f"Pitch template '{name}' updated.", "success")
+        return redirect(url_for("admin.pitch_template_list"))
+
+    form_data = {
+        "name": template.name,
+        "body": template.body,
+        "category": template.category,
+    }
+    return render_template(
+        "admin/pitch_template_form.html",
+        form_data=form_data,
+        template=template,
+        is_edit=True,
+    )
+
+
+@admin_bp.route("/pitch-templates/<template_id>/toggle", methods=["POST"])
+@admin_required
+def pitch_template_toggle(template_id):
+    """Toggle a pitch template between active and inactive."""
+    template = db.session.get(PitchTemplate, template_id)
+    if template is None:
+        flash("Pitch template not found.", "error")
+        return redirect(url_for("admin.pitch_template_list"))
+
+    template.is_active = not template.is_active
+    db.session.commit()
+
+    state = "activated" if template.is_active else "deactivated"
+    flash(f"Pitch template '{template.name}' {state}.", "success")
+    return redirect(url_for("admin.pitch_template_list"))
+
+
+@admin_bp.route("/pitch-templates/<template_id>/delete", methods=["POST"])
+@admin_required
+def pitch_template_delete(template_id):
+    """Delete a pitch template."""
+    template = db.session.get(PitchTemplate, template_id)
+    if template is None:
+        flash("Pitch template not found.", "error")
+        return redirect(url_for("admin.pitch_template_list"))
+
+    name = template.name
+    db.session.delete(template)
+    db.session.commit()
+
+    flash(f"Pitch template '{name}' deleted.", "success")
+    return redirect(url_for("admin.pitch_template_list"))
 
 
 # ══════════════════════════════════════════════
