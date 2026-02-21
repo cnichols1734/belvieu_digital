@@ -15,3 +15,4 @@ from app.models.ticket import Ticket, TicketMessage  # noqa: F401
 from app.models.audit import AuditEvent  # noqa: F401
 from app.models.prospect_activity import ProspectActivity  # noqa: F401
 from app.models.contact_form import ContactFormConfig  # noqa: F401
+from app.models.pitch_template import PitchTemplate  # noqa: F401

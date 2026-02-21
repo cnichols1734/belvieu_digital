@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Pitch Templates — Belvieu Digital{% endblock %}
+
+{% block content %}
+{% include 'admin/_nav.html' %}
+
+<div class="page-header">
+    <div class="page-header-row">
+        <div>
+            <h1>Pitch Templates</h1>
+            <p>Reusable outreach messages for text, Facebook, and DMs. Use variables like <code>{% raw %}{{business_name}}{% endraw %}</code> to auto-fill prospect info.</p>
+        </div>
+        <a href="{{ url_for('admin.pitch_template_new') }}" class="btn btn-primary">New Template</a>
+    </div>
+</div>
+
+{% if templates %}
+    {% set initial = templates | selectattr('category', 'equalto', 'initial') | list %}
+    {% set followup = templates | selectattr('category', 'equalto', 'followup') | list %}
+
+    {% if initial %}
+    <div class="mb-3">
+        <h3 class="text-sm font-medium mb-1" style="text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary);">Initial Pitches</h3>
+        <div class="pitch-template-grid">
+            {% for t in initial %}
+            <div class="card pitch-template-card {% if not t.is_active %}pitch-template-inactive{% endif %}">
+                <div class="card-header">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="font-medium">{{ t.name }}</span>
+                        {% if t.is_active %}
+                            <span class="badge badge-green">Active</span>
+                        {% else %}
+                            <span class="badge badge-gray">Inactive</span>
+                        {% endif %}
+                    </div>
+                    <div style="display: flex; gap: 0.25rem;">
+                        <a href="{{ url_for('admin.pitch_template_edit', template_id=t.id) }}" class="btn btn-sm btn-ghost">Edit</a>
+                        <form method="POST" action="{{ url_for('admin.pitch_template_toggle', template_id=t.id) }}" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-ghost">{{ 'Deactivate' if t.is_active else 'Activate' }}</button>
+                        </form>
+                    </div>
+                </div>
+                <p class="pitch-template-body">{{ t.body }}</p>
+                <div class="pitch-template-meta">
+                    <span class="text-xs text-muted">Created {{ t.created_at.strftime('%b %d, %Y') if t.created_at else '' }}</span>
+                    <form method="POST" action="{{ url_for('admin.pitch_template_delete', template_id=t.id) }}" style="display: inline;"
+                          onsubmit="return confirm('Delete this template?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-ghost" style="color: var(--red-500);">Delete</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if followup %}
+    <div class="mb-3">
+        <h3 class="text-sm font-medium mb-1" style="text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary);">Follow-up Pitches</h3>
+        <div class="pitch-template-grid">
+            {% for t in followup %}
+            <div class="card pitch-template-card {% if not t.is_active %}pitch-template-inactive{% endif %}">
+                <div class="card-header">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="font-medium">{{ t.name }}</span>
+                        {% if t.is_active %}
+                            <span class="badge badge-green">Active</span>
+                        {% else %}
+                            <span class="badge badge-gray">Inactive</span>
+                        {% endif %}
+                    </div>
+                    <div style="display: flex; gap: 0.25rem;">
+                        <a href="{{ url_for('admin.pitch_template_edit', template_id=t.id) }}" class="btn btn-sm btn-ghost">Edit</a>
+                        <form method="POST" action="{{ url_for('admin.pitch_template_toggle', template_id=t.id) }}" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-ghost">{{ 'Deactivate' if t.is_active else 'Activate' }}</button>
+                        </form>
+                    </div>
+                </div>
+                <p class="pitch-template-body">{{ t.body }}</p>
+                <div class="pitch-template-meta">
+                    <span class="text-xs text-muted">Created {{ t.created_at.strftime('%b %d, %Y') if t.created_at else '' }}</span>
+                    <form method="POST" action="{{ url_for('admin.pitch_template_delete', template_id=t.id) }}" style="display: inline;"
+                          onsubmit="return confirm('Delete this template?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-ghost" style="color: var(--red-500);">Delete</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+{% else %}
+    <div class="card">
+        <p class="text-muted" style="padding: 2rem; text-align: center;">
+            No pitch templates yet. Create your first one to speed up outreach.
+        </p>
+    </div>
+{% endif %}
+
+<div class="card mt-3" style="max-width: 720px;">
+    <div class="card-header">Available Variables</div>
+    <p class="text-sm text-muted mb-1">Use these placeholders in your template body. They get replaced with prospect data when you view a pitch.</p>
+    <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Variable</th>
+                    <th>Replaced With</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% raw %}
+                <tr><td><code>{{business_name}}</code></td><td>Prospect's business name</td></tr>
+                <tr><td><code>{{demo_url}}</code></td><td>Demo site URL (Cloudflare Pages link)</td></tr>
+                <tr><td><code>{{contact_name}}</code></td><td>Full contact name</td></tr>
+                <tr><td><code>{{first_name}}</code></td><td>Contact's first name only</td></tr>
+                <tr><td><code>{{my_phone}}</code></td><td>Your phone number — (713) 725-4459</td></tr>
+                <tr><td><code>{{portal_url}}</code></td><td>Portal URL — portal.belvieudigital.com</td></tr>
+                {% endraw %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

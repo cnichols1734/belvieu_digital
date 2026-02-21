@@ -43,6 +43,12 @@
     --blue-100:  #dbeafe;
     --blue-500:  #3b82f6;
     --blue-700:  #1d4ed8;
+    --orange-50:  #fff7ed;
+    --orange-500: #f97316;
+    --orange-700: #c2410c;
+    --purple-50:  #faf5ff;
+    --purple-500: #a855f7;
+    --purple-700: #7e22ce;
 
     /* Surfaces */
     --color-bg:       #fafafa;
@@ -1841,6 +1847,15 @@ select.form-control {
 .badge-declined     { background: var(--red-50); color: var(--red-700); }
 .badge-declined .badge-dot { background: var(--red-500); }
 
+.badge-withdrawn    { background: var(--orange-50); color: var(--orange-700); }
+.badge-withdrawn .badge-dot { background: var(--orange-500); }
+
+.badge-closed_business { background: var(--gray-100); color: var(--gray-600); }
+.badge-closed_business .badge-dot { background: var(--gray-400); }
+
+.badge-on_hold      { background: var(--purple-50); color: var(--purple-700); }
+.badge-on_hold .badge-dot { background: var(--purple-500); }
+
 /* ─── Admin Badge Colors for Source ─── */
 .badge-google_maps  { background: var(--blue-50); color: var(--blue-700); }
 .badge-facebook     { background: var(--blue-50); color: var(--blue-700); }
@@ -2640,6 +2655,18 @@ select.form-control {
     color: var(--red-600);
 }
 
+.pipeline-step.withdrawn {
+    color: var(--orange-700);
+}
+
+.pipeline-step.closed_business {
+    color: var(--gray-600);
+}
+
+.pipeline-step.on_hold {
+    color: var(--purple-700);
+}
+
 .pipeline-step-dot {
     width: 8px;
     height: 8px;
@@ -2660,6 +2687,21 @@ select.form-control {
 .pipeline-step.declined .pipeline-step-dot {
     background: var(--red-500);
     box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.pipeline-step.withdrawn .pipeline-step-dot {
+    background: var(--orange-500);
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+}
+
+.pipeline-step.closed_business .pipeline-step-dot {
+    background: var(--gray-400);
+    box-shadow: 0 0 0 3px rgba(153, 153, 153, 0.1);
+}
+
+.pipeline-step.on_hold .pipeline-step-dot {
+    background: var(--purple-500);
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
 }
 
 .pipeline-step-line {
@@ -2824,5 +2866,97 @@ select.form-control {
     }
     .pipeline-step-line {
         width: 16px;
+    }
+}
+
+/* ══════════════════════════════════════
+   Pitch Templates
+   ══════════════════════════════════════ */
+
+.pitch-template-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 1rem;
+}
+
+.pitch-template-card {
+    transition: opacity var(--transition);
+}
+.pitch-template-inactive {
+    opacity: 0.55;
+}
+
+.pitch-template-body {
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: var(--color-text-secondary);
+    white-space: pre-wrap;
+    padding: 0 1rem 0.75rem;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.pitch-template-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-top: 1px solid var(--color-border-light);
+}
+
+/* Pitch cards on prospect detail */
+.pitch-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+.pitch-card {
+    position: relative;
+}
+
+.pitch-card-body {
+    font-size: 0.8125rem;
+    line-height: 1.65;
+    color: var(--color-text);
+    white-space: pre-wrap;
+    padding: 0 1rem 1rem;
+    word-break: break-word;
+}
+
+.pitch-copy-btn {
+    gap: 0.25rem;
+    display: inline-flex;
+    align-items: center;
+}
+
+.pitch-copy-success {
+    background: var(--green-50) !important;
+    border-color: var(--green-500) !important;
+    color: var(--green-700) !important;
+}
+
+/* Preview box on create/edit form */
+.pitch-preview-box {
+    font-size: 0.8125rem;
+    line-height: 1.65;
+    background: var(--gray-50);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+    min-height: 120px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.pitch-preview-box strong {
+    color: var(--gray-900);
+    background: var(--yellow-100);
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+@media (max-width: 768px) {
+    .pitch-template-grid {
+        grid-template-columns: 1fr;
     }
 }
