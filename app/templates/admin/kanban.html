@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Kanban Board — Belvieu Digital{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kanban.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+{% endblock %}
+
+{% block content %}
+{% include 'admin/_nav.html' %}
+
+<div class="kanban-page">
+    <!-- Board Header -->
+    <header class="board-header">
+        <div class="header-left">
+            <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="9" rx="1" />
+                <rect x="14" y="3" width="7" height="5" rx="1" />
+                <rect x="3" y="16" width="7" height="5" rx="1" />
+                <rect x="14" y="12" width="7" height="9" rx="1" />
+            </svg>
+            <h1 class="board-title">WaaS Research Board</h1>
+        </div>
+        <div class="header-right">
+            <button class="btn-header" id="kbSettingsBtn" title="Settings">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 1v4m0 14v4M4.22 4.22l2.83 2.83m9.9 9.9l2.83 2.83M1 12h4m14 0h4M4.22 19.78l2.83-2.83m9.9-9.9l2.83-2.83"/>
+                </svg>
+            </button>
+            <button class="btn-header" id="kbAddColumnBtn" title="Add Column">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Add List
+            </button>
+        </div>
+    </header>
+
+    <!-- Board -->
+    <main class="kb-board" id="kbBoard">
+        <!-- Columns render here dynamically -->
+    </main>
+
+    <!-- Card Detail Modal -->
+    <div class="kb-modal-overlay" id="kbModalOverlay">
+        <div class="kb-modal" id="kbCardModal">
+            <button class="kb-modal-close" id="kbModalClose">&times;</button>
+            <div class="kb-modal-header">
+                <svg class="kb-modal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <line x1="9" y1="3" x2="9" y2="21" />
+                </svg>
+                <input type="text" class="kb-modal-title-input" id="kbModalTitle" placeholder="Card title...">
+            </div>
+            <div class="kb-modal-meta">
+                <span class="kb-modal-meta-item" id="kbModalColumn"></span>
+                <span class="kb-modal-meta-item" id="kbModalCreated"></span>
+            </div>
+            <div class="kb-modal-labels" id="kbModalLabels">
+                <span class="label-title">Labels:</span>
+                <div class="label-chips" id="kbLabelChips"></div>
+                <button class="btn-add-label" id="kbAddLabelBtn" title="Add Label">+</button>
+            </div>
+            <div class="label-picker" id="kbLabelPicker" style="display:none;">
+                <div class="label-color" data-color="#61bd4f" style="background:#61bd4f;"></div>
+                <div class="label-color" data-color="#f2d600" style="background:#f2d600;"></div>
+                <div class="label-color" data-color="#ff9f1a" style="background:#ff9f1a;"></div>
+                <div class="label-color" data-color="#eb5a46" style="background:#eb5a46;"></div>
+                <div class="label-color" data-color="#c377e0" style="background:#c377e0;"></div>
+                <div class="label-color" data-color="#0079bf" style="background:#0079bf;"></div>
+                <div class="label-color" data-color="#00c2e0" style="background:#00c2e0;"></div>
+                <div class="label-color" data-color="#51e898" style="background:#51e898;"></div>
+                <div class="label-color" data-color="#ff78cb" style="background:#ff78cb;"></div>
+                <div class="label-color" data-color="#344563" style="background:#344563;"></div>
+            </div>
+
+            <!-- Prospect action -->
+            <div id="kbProspectAction" style="margin-top:12px;"></div>
+
+            <div class="kb-modal-section">
+                <div class="kb-modal-section-header">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                        <line x1="3" y1="6" x2="21" y2="6" />
+                        <line x1="3" y1="12" x2="15" y2="12" />
+                        <line x1="3" y1="18" x2="18" y2="18" />
+                    </svg>
+                    <h3>Description</h3>
+                    <div class="desc-mode-toggle">
+                        <button class="btn-toggle active" id="kbBtnEdit">Edit</button>
+                        <button class="btn-toggle" id="kbBtnPreview">Preview</button>
+                    </div>
+                </div>
+                <textarea class="kb-modal-description" id="kbModalDescription"
+                    placeholder="Add a detailed description using Markdown..."></textarea>
+                <div class="kb-modal-preview markdown-body" id="kbModalPreview" style="display:none;"></div>
+            </div>
+            <div class="kb-modal-section">
+                <div class="kb-modal-section-header">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                        <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" />
+                    </svg>
+                    <h3>Move card</h3>
+                </div>
+                <select class="kb-modal-select" id="kbModalMoveSelect"></select>
+            </div>
+            <div class="kb-modal-section kb-modal-comments-section">
+                <div class="kb-modal-section-header">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <h3>Comments</h3>
+                </div>
+                <div class="comments-list" id="kbCommentsList"></div>
+                <div class="comment-form">
+                    <input type="text" class="comment-author-input" id="kbCommentAuthor" placeholder="Your name...">
+                    <textarea class="comment-text-input" id="kbCommentText" placeholder="Write a comment..."></textarea>
+                    <div class="comment-form-actions">
+                        <button class="btn-add-comment" id="kbAddCommentBtn">Add comment</button>
+                    </div>
+                </div>
+            </div>
+            <div class="kb-modal-footer">
+                <button class="kb-btn-save" id="kbModalSave">Save changes</button>
+                <button class="kb-btn-delete" id="kbModalDelete">Delete card</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Column Rename Modal -->
+    <div class="kb-modal-overlay" id="kbRenameOverlay" style="display:none;">
+        <div class="kb-modal kb-modal-small">
+            <button class="kb-modal-close" id="kbRenameClose">&times;</button>
+            <h2 style="margin:0 0 16px;">Rename list</h2>
+            <input type="text" class="kb-modal-title-input" id="kbRenameInput" placeholder="List name...">
+            <div class="kb-modal-footer" style="margin-top:16px;">
+                <button class="kb-btn-save" id="kbRenameSave">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Column Modal -->
+    <div class="kb-modal-overlay" id="kbAddColumnOverlay" style="display:none;">
+        <div class="kb-modal kb-modal-small">
+            <button class="kb-modal-close" id="kbAddColumnClose">&times;</button>
+            <div class="kb-modal-header" style="padding-right:36px;">
+                <svg class="kb-modal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <line x1="12" y1="8" x2="12" y2="16" />
+                    <line x1="8" y1="12" x2="16" y2="12" />
+                </svg>
+                <h2 style="margin:0;font-size:18px;">Add new list</h2>
+            </div>
+            <input type="text" class="kb-modal-title-input" id="kbAddColumnInput" placeholder="Enter list name..." style="margin-top:16px;">
+            <div class="kb-modal-footer" style="margin-top:16px;">
+                <button class="kb-btn-save" id="kbAddColumnSave">Add list</button>
+                <button class="kb-btn-delete" id="kbAddColumnCancel" style="border:none;color:var(--kb-text-secondary);">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div class="kb-modal-overlay" id="kbSettingsOverlay" style="display:none;">
+        <div class="kb-modal kb-modal-small">
+            <button class="kb-modal-close" id="kbSettingsClose">&times;</button>
+            <h2 style="margin:0 0 16px;">Settings</h2>
+            <div class="settings-section">
+                <label class="settings-label">Board background</label>
+                <div class="settings-bg-options">
+                    <button class="bg-option" data-bg="#0079bf" style="background:#0079bf;"></button>
+                    <button class="bg-option" data-bg="#d29034" style="background:#d29034;"></button>
+                    <button class="bg-option" data-bg="#519839" style="background:#519839;"></button>
+                    <button class="bg-option" data-bg="#b04632" style="background:#b04632;"></button>
+                    <button class="bg-option" data-bg="#89609e" style="background:#89609e;"></button>
+                    <button class="bg-option" data-bg="#17394d" style="background:#17394d;"></button>
+                </div>
+                <div class="settings-upload">
+                    <label for="kbBgUpload" class="btn-upload">Upload photo...</label>
+                    <input type="file" id="kbBgUpload" accept="image/*" style="display:none;">
+                </div>
+            </div>
+            <div class="settings-section">
+                <label class="settings-label">Board name</label>
+                <input type="text" class="kb-modal-title-input" id="kbBoardNameInput" placeholder="Board name...">
+            </div>
+            <div class="kb-modal-footer" style="margin-top:16px;">
+                <button class="kb-btn-save" id="kbSettingsSave">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/kanban.js') }}"></script>
+{% endblock %}

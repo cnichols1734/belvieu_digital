@@ -49,6 +49,7 @@ def create_app(config_name=None):
     from app.blueprints.webhooks import webhooks_bp
     from app.blueprints.contact import contact_bp
     from app.blueprints.form_relay import form_relay_bp
+    from app.blueprints.kanban import kanban_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(portal_bp)
@@ -57,11 +58,14 @@ def create_app(config_name=None):
     app.register_blueprint(webhooks_bp)
     app.register_blueprint(contact_bp)
     app.register_blueprint(form_relay_bp)
+    app.register_blueprint(kanban_bp)
 
     # Exempt webhooks from CSRF — raw body needed for Stripe signature verification
     csrf.exempt(webhooks_bp)
     # Exempt form relay from CSRF — public API hit by external client websites
     csrf.exempt(form_relay_bp)
+    # Exempt kanban API from CSRF — admin-only JSON API behind auth
+    csrf.exempt(kanban_bp)
 
     # --- Root route ---
     @app.route("/")
@@ -131,7 +135,7 @@ def create_app(config_name=None):
         # Content Security Policy
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https://js.stripe.com; "
+            "script-src 'self' 'unsafe-inline' https://js.stripe.com https://cdn.jsdelivr.net; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "img-src 'self' data: https://api.microlink.io https://*.supabase.co; "
             "font-src 'self' https://fonts.gstatic.com; "
@@ -370,6 +374,68 @@ def register_cli(app):
         check_price("setup", setup_id)
         click.echo("STRIPE_BASIC_PRICE_ID (monthly):")
         check_price("basic", basic_id)
+
+    @app.cli.command("migrate-kanban")
+    @click.option("--db-path", default=None, help="Path to kanban.db (default: ~/Kanban/kanban.db)")
+    def migrate_kanban(db_path):
+        """One-time import of columns and cards from the standalone Kanban SQLite DB.
+
+        Reads ~/Kanban/kanban.db, maps integer IDs to UUIDs, and inserts
+        into the kanban_columns / kanban_cards tables via SQLAlchemy.
+        Skips if data already exists (idempotent).
+        """
+        import sqlite3
+        import uuid as _uuid
+        from pathlib import Path
+
+        from app.models.kanban import KanbanColumn, KanbanCard
+
+        if KanbanColumn.query.first():
+            click.echo("Kanban data already exists — skipping import.")
+            return
+
+        src = db_path or str(Path.home() / "Kanban" / "kanban.db")
+        if not Path(src).exists():
+            click.echo(f"ERROR: Source database not found at {src}")
+            return
+
+        conn = sqlite3.connect(src)
+        conn.row_factory = sqlite3.Row
+
+        old_cols = conn.execute("SELECT * FROM columns ORDER BY position").fetchall()
+        old_cards = conn.execute("SELECT * FROM cards ORDER BY column_id, position").fetchall()
+        conn.close()
+
+        col_id_map = {}
+        for row in old_cols:
+            new_id = str(_uuid.uuid4())
+            col_id_map[row["id"]] = new_id
+            db.session.add(KanbanColumn(
+                id=new_id,
+                title=row["title"],
+                position=row["position"],
+            ))
+
+        card_count = 0
+        for row in old_cards:
+            new_col_id = col_id_map.get(row["column_id"])
+            if not new_col_id:
+                click.echo(f"  WARNING: card '{row['title']}' references unknown column {row['column_id']} — skipped")
+                continue
+            db.session.add(KanbanCard(
+                id=str(_uuid.uuid4()),
+                kanban_column_id=new_col_id,
+                card_number=row["id"],
+                title=row["title"],
+                description=row["description"] or "",
+                position=row["position"],
+                labels=row["labels"] or "[]",
+                comments=row["comments"] or "[]",
+            ))
+            card_count += 1
+
+        db.session.commit()
+        click.echo(f"Imported {len(old_cols)} columns and {card_count} cards.")
 
     @app.cli.command("send-reminders")
     @click.option("--dry-run", is_flag=True, help="Show what would be sent without actually sending.")

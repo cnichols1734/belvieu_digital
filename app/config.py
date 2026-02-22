@@ -36,6 +36,9 @@ class Config:
     MAIL_FROM_ADDRESS = os.environ.get("MAIL_FROM_ADDRESS")  # defaults to MAIL_USERNAME
     MAIL_CONTACT_TO = os.environ.get("MAIL_CONTACT_TO", "info@belvieudigital.com")
 
+    # --- Kanban API (bot access) ---
+    KANBAN_API_KEY = os.environ.get("KANBAN_API_KEY")
+
     # --- Domain search ---
     DOMAIN_PRICE_LIMIT = float(os.environ.get("DOMAIN_PRICE_LIMIT", 25.00))
 
