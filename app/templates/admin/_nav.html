@@ -13,4 +13,6 @@
        class="admin-subnav-link {% if 'ticket' in ep %}active{% endif %}">Tickets</a>
     <a href="{{ url_for('admin.stripe_health') }}"
        class="admin-subnav-link {% if 'stripe' in ep %}active{% endif %}">Stripe</a>
+    <a href="{{ url_for('kanban.board') }}"
+       class="admin-subnav-link {% if 'kanban' in ep %}active{% endif %}">Kanban</a>
 </nav>
