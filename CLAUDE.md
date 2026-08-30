@@ -4,7 +4,9 @@ Context for AI assistants working on this repository. Read this before making an
 
 ## Project Overview
 
-**WaaS (Website-as-a-Service) portal** for Belvieu Digital. The business finds small businesses (via Google Maps / Facebook) with no website or a poor one, builds a custom one-pager, pitches it with a live `.dev` preview link, then converts them to paying clients at $59/month. An optional $250 one-time setup fee is charged (first month of hosting is free with setup) — controlled by the `PROMO_NO_SETUP_FEE` env var.
+**WaaS (Website-as-a-Service) portal** for Belvieu Digital. The business finds small businesses (via Google Maps / Facebook) with no website or a poor one, builds a custom one-pager in a **separate** Astro + TypeScript repo, pitches it with a live Cloudflare preview URL, then converts them to paying clients at $59/month. An optional $250 one-time setup fee is charged (first month of hosting is free with setup) — controlled by the `PROMO_NO_SETUP_FEE` env var.
+
+**This repo is the control plane only.** It does not generate or host client websites. It stores slugs and URLs. See [`docs/client-sites.md`](docs/client-sites.md). Full look-and-feel / build law lives in [`cnichols1734/waas-researcher`](https://github.com/cnichols1734/waas-researcher).
 
 **Live domain:** `https://portal.belvieudigital.com`
 
@@ -27,6 +29,8 @@ Context for AI assistants working on this repository. Read this before making an
 
 ```
 belvieu_digital/
+├── docs/
+│   └── client-sites.md  # How client sites are designed, repo'd, hosted (not generated here)
 ├── app/
 │   ├── __init__.py          # create_app() factory — extensions, blueprints, CLI, headers
 │   ├── config.py            # DevConfig / TestConfig / ProdConfig + validate()
@@ -158,6 +162,9 @@ flask send-reminders --dry-run  # Preview what would be sent
 
 ### Application Factory
 `create_app(config_name)` in `app/__init__.py`. Config name defaults to `FLASK_ENV` env var. Extensions are initialized with `init_app()` (deferred pattern). Models are imported inside `app.app_context()` for Alembic discovery.
+
+### Client Sites (not this repo)
+Client websites are custom Astro + TypeScript static one-pagers, one GitHub org repo per business, hosted on Cloudflare Workers Static Assets (Pages-compatible). This portal stores URLs only (`prospects.demo_url`, `sites.published_url`). See [`docs/client-sites.md`](docs/client-sites.md). Do not add a site generator here.
 
 ### Multi-Tenant Design
 Each client business is a **Workspace**. A Workspace has one **Site** (with a unique `site_slug`). Portal routes are prefixed `/<site_slug>/`. The **tenant middleware** (`app/middleware/tenant.py`) runs before every request and sets on Flask's `g`:

@@ -37,7 +37,7 @@ class Prospect(db.Model):
     notes = db.Column(db.Text, nullable=True)  # free-form notes
     demo_url = db.Column(
         db.String(500), nullable=True
-    )  # cloudflare .dev preview link
+    )  # live preview URL (workers.dev or custom domain); written back after QA
     status = db.Column(db.String(50), default="researching", nullable=False)
     workspace_id = db.Column(
         db.String(36),

@@ -26,7 +26,7 @@ class Site(db.Model):
     display_name = db.Column(db.String(255), nullable=True)
     published_url = db.Column(
         db.String(500), nullable=True
-    )  # cloudflare .dev preview link
+    )  # deployed site URL (workers.dev preview or custom domain)
     custom_domain = db.Column(
         db.String(255), nullable=True
     )  # bought domain after purchase

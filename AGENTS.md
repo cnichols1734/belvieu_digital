@@ -6,6 +6,8 @@
 
 WaaS Portal — a Flask application for managing small business website clients. See `CLAUDE.md` for comprehensive architecture documentation, route reference, and code conventions.
 
+Client websites are **not** built in this repo. They are Astro + TypeScript static one-pagers, one GitHub org repo per business, hosted on Cloudflare Workers Static Assets (Pages-compatible). This portal stores URLs only. See `docs/client-sites.md`. Full look-and-feel law lives in `cnichols1734/waas-researcher`.
+
 ### Running Tests
 
 Tests are fully self-contained (in-memory SQLite, mocked Stripe, no `.env` needed):

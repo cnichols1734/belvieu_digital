@@ -8,7 +8,7 @@
 
 ## Project Overview
 
-WaaS (Website-as-a-Service) portal for Chris's business: find small businesses on Google Maps / Facebook with no site or a bad one, build them a custom one-pager, pitch them with a live .dev preview link, convert them to paying clients at $59/mo. Optionally a $250 one-time setup fee is charged (first month free with setup) — controlled by the `PROMO_NO_SETUP_FEE` env var / feature flag.
+WaaS (Website-as-a-Service) portal for Chris's business: find small businesses on Google Maps / Facebook with no site or a bad one, build them a custom Astro + TypeScript one-pager in a separate GitHub org repo, pitch them with a live Cloudflare preview URL (`workers.dev`, then custom domain), convert them to paying clients at $59/mo. Optionally a $250 one-time setup fee is charged (first month free with setup) — controlled by the `PROMO_NO_SETUP_FEE` env var / feature flag. This repo is the control plane only (URLs, billing, tickets). See `docs/client-sites.md`.
 
 **Stack:** Flask, Supabase Postgres, Stripe, Railway. Server-rendered HTML (Jinja), vanilla JS + CSS. No React, no SPA.
 
@@ -324,8 +324,8 @@ WaaS (Website-as-a-Service) portal for Chris's business: find small businesses o
 4. **Dual tenant isolation** — every portal query checks BOTH `workspace_id == g.workspace_id` AND membership exists.
 5. **Dual Supabase connections** — pooler for runtime, direct for migrations.
 6. **Prospects table (lite CRM)** — full pipeline: researching -> site_built -> pitched -> converted -> declined.
-7. **Cloudflare is manual** — portal tracks URLs only. No API integration. Demo sites get `<meta name="robots" content="noindex">`.
-8. **No templates/generators** — every client site is 100% custom-built by Chris.
+7. **Cloudflare hosting is outside this repo** — portal tracks URLs only. No API integration. Sites deploy from their own Belvieu Digital GitHub org repos to Cloudflare Workers Static Assets (also compatible with Pages). Temporary `workers.dev` preview; custom domain later without architecture change. Demo sites get `<meta name="robots" content="noindex">`.
+8. **No templates/generators** — every client site is a production-quality custom Astro + TypeScript one-pager (`src/data/site.ts`, `PRODUCT.md`, `DESIGN.md`). Full design/build law lives in `cnichols1734/waas-researcher`.
 9. **Cancellation = paused** — holding page deployed manually on Cloudflare. No buyout/export.
 10. **Auth routes are slug-independent** — `/auth/login?next=...`, not `/auth/login/<slug>`.
 

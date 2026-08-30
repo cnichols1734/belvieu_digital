@@ -6,7 +6,7 @@ outreach via text, Facebook, or any non-email channel.
 
 Template variables use {{variable}} syntax:
   {{business_name}}  — prospect's business name
-  {{demo_url}}       — Cloudflare Pages demo link
+  {{demo_url}}       — live client-site URL (workers.dev or custom domain)
   {{contact_name}}   — full contact name
   {{first_name}}     — first name only
   {{my_phone}}       — your phone number
