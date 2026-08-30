@@ -1,8 +1,10 @@
 # WaaS Portal
 
-Client portal and admin dashboard for a Website-as-a-Service business.
+Client portal and admin dashboard for Belvieu Digital (Website-as-a-Service).
 
 **Stack:** Flask, Supabase (Postgres), Stripe, Railway
+
+This repo is the control plane (`portal.belvieudigital.com`). It does **not** generate client websites. Those are custom Astro + TypeScript one-pagers — one GitHub repo per business in the Belvieu Digital org — hosted on Cloudflare Workers Static Assets (also compatible with Cloudflare Pages). The portal stores URLs only. See [`docs/client-sites.md`](docs/client-sites.md). The full design/build law lives in [`cnichols1734/waas-researcher`](https://github.com/cnichols1734/waas-researcher).
 
 ## Local Development
 
