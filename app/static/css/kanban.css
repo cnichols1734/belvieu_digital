@@ -2,10 +2,9 @@
    Scoped under .kanban-page to avoid collision with the portal design system.
    ──────────────────────────────────────────────────────────────── */
 
-/* Let the board stretch full-width instead of being constrained by .main */
-body:has(.kanban-page) .main {
+/* Let the board stretch full-bleed inside the new shell */
+body:has(.kanban-page) .content-wrapper {
     max-width: 100%;
-    padding-left: 0;
     padding-right: 0;
     padding-bottom: 0;
 }
@@ -98,7 +97,7 @@ body:has(.kanban-page) .main {
     display: flex;
     gap: 12px;
     padding: 16px;
-    height: calc(100vh - 52px - 48px - 52px);
+    height: calc(100vh - var(--topbar-height, 3.5rem) - 52px);
     overflow-x: auto;
     overflow-y: hidden;
     align-items: flex-start;
@@ -128,7 +127,7 @@ body:has(.kanban-page) .main {
     border-radius: var(--kb-border-radius);
     display: flex;
     flex-direction: column;
-    max-height: calc(100vh - 52px - 48px - 52px - 32px);
+    max-height: calc(100vh - var(--topbar-height, 3.5rem) - 52px - 32px);
     flex-shrink: 0;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
     animation: kbSlideIn 0.25s ease-out;

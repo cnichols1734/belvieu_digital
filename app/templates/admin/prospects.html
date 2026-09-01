@@ -1,19 +1,15 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
 
 {% block title %}Prospects — Belvieu Digital{% endblock %}
 
 {% block content %}
-{% include 'admin/_nav.html' %}
+<div class="bd-page">
+<div class="bd-page__inner">
 
-<div class="page-header">
-    <div class="page-header-row">
-        <div>
-            <h1>Prospects</h1>
-            <p>Your pipeline from discovery to conversion.</p>
-        </div>
-        <a href="{{ url_for('admin.prospect_new') }}" class="btn btn-primary">+ Add Prospect</a>
-    </div>
-</div>
+{% call page_header('Prospects', 'Your pipeline from discovery to conversion.') %}
+    <a href="{{ url_for('admin.prospect_new') }}" class="bd-btn bd-btn-accent">Add prospect</a>
+{% endcall %}
 
 {# Status Filter Tabs #}
 <div class="ticket-filters">
@@ -108,4 +104,6 @@
     <a href="{{ url_for('admin.prospect_new') }}" class="btn btn-primary">+ Add Your First Prospect</a>
 </div>
 {% endif %}
+</div>
+</div>
 {% endblock %}

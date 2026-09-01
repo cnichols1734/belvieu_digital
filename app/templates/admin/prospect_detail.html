@@ -3,7 +3,8 @@
 {% block title %}{{ prospect.business_name }} — Belvieu Digital{% endblock %}
 
 {% block content %}
-{% include 'admin/_nav.html' %}
+<div class="bd-page">
+<div class="bd-page__inner">
 
 {# Breadcrumb #}
 <div class="breadcrumb">
@@ -491,6 +492,8 @@
     {% endif %}
 </div>
 {% endif %}
+</div>
+</div>
 {% endblock %}
 
 {% block scripts %}

@@ -1,19 +1,15 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
 
 {% block title %}Admin Dashboard — Belvieu Digital{% endblock %}
 
 {% block content %}
-{% include 'admin/_nav.html' %}
+<div class="bd-page">
+<div class="bd-page__inner">
 
-<div class="page-header">
-    <div class="page-header-row">
-        <div>
-            <h1>Dashboard</h1>
-            <p>Pipeline, revenue, and operations at a glance.</p>
-        </div>
-        <a href="{{ url_for('admin.prospect_new') }}" class="btn btn-primary">+ Add Prospect</a>
-    </div>
-</div>
+{% call page_header('Dashboard', 'Pipeline, revenue, and operations at a glance.', 'Admin') %}
+    <a href="{{ url_for('admin.prospect_new') }}" class="bd-btn bd-btn-accent">Add prospect</a>
+{% endcall %}
 
 {# ── Stats ── #}
 <div class="stats-grid">
@@ -184,4 +180,6 @@
     </div>
 </div>
 {% endif %}
+</div>
+</div>
 {% endblock %}

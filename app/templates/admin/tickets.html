@@ -3,12 +3,11 @@
 {% block title %}All Tickets — Belvieu Digital{% endblock %}
 
 {% block content %}
-{% include 'admin/_nav.html' %}
+<div class="bd-page">
+<div class="bd-page__inner">
 
-<div class="page-header">
-    <h1>Tickets</h1>
-    <p>Support tickets across all workspaces.</p>
-</div>
+{% from "components/ui.html" import page_header %}
+{% call page_header('Tickets', 'Support tickets across all workspaces.') %}{% endcall %}
 
 {# Filters #}
 <div class="admin-ticket-filters">
@@ -104,6 +103,8 @@
     <p>Tickets from clients will appear here.</p>
 </div>
 {% endif %}
+</div>
+</div>
 {% endblock %}
 
 {% block scripts %}

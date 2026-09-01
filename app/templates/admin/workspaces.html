@@ -3,12 +3,11 @@
 {% block title %}Workspaces — Belvieu Digital{% endblock %}
 
 {% block content %}
-{% include 'admin/_nav.html' %}
+<div class="bd-page">
+<div class="bd-page__inner">
 
-<div class="page-header">
-    <h1>Workspaces</h1>
-    <p>All client workspaces with subscription and invite status.</p>
-</div>
+{% from "components/ui.html" import page_header %}
+{% call page_header('Workspaces', 'All client workspaces with subscription and invite status.') %}{% endcall %}
 
 {% if workspace_data %}
 <div class="table-container">
@@ -108,4 +107,6 @@
     <a href="{{ url_for('admin.prospect_list') }}" class="btn btn-primary">View Prospects</a>
 </div>
 {% endif %}
+</div>
+</div>
 {% endblock %}

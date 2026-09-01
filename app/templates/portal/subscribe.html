@@ -3,6 +3,9 @@
 {% block title %}Activate Your Website — {{ g.site.display_name or g.workspace.name }}{% endblock %}
 
 {% block content %}
+<div class="bd-page">
+<div class="bd-page__inner">
+
 <div class="cta-page" style="max-width: 100%; padding-bottom: 2rem;">
     <svg style="width: 48px; height: 48px; margin: 0 auto 1rem; color: var(--green-500, #22c55e);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -534,4 +537,6 @@
     {% endif %}
 })();
 </script>
+</div>
+</div>
 {% endblock %}

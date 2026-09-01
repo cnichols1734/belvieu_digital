@@ -1,0 +1,41 @@
+{% macro page_header(title, description='', eyebrow='') -%}
+<div class="bd-page-header">
+    <div class="bd-page-header__copy">
+        {% if eyebrow %}
+        <div class="bd-page-header__eyebrow">{{ eyebrow }}</div>
+        {% endif %}
+        <h1 class="bd-page-title">{{ title|safe }}</h1>
+        {% if description %}
+        <p class="bd-page-description">{{ description|safe }}</p>
+        {% endif %}
+    </div>
+    {% if caller %}
+    <div class="bd-page-actions">
+        {{ caller() }}
+    </div>
+    {% endif %}
+</div>
+{%- endmacro %}
+
+{% macro badge(label, tone='neutral') -%}
+{% set tone_class = {
+    'accent': 'bd-badge bd-badge-accent',
+    'success': 'bd-badge bd-badge-success',
+    'warning': 'bd-badge bd-badge-warning',
+    'info': 'bd-badge bd-badge-info',
+    'danger': 'bd-badge bd-badge-danger'
+}.get(tone, 'bd-badge') %}
+<span class="{{ tone_class }}">{{ label }}</span>
+{%- endmacro %}
+
+{% macro empty_state(title, description) -%}
+<div class="bd-empty">
+    <h3 class="bd-empty__title">{{ title }}</h3>
+    <p class="bd-empty__copy">{{ description }}</p>
+    {% if caller %}
+    <div class="bd-empty__actions">
+        {{ caller() }}
+    </div>
+    {% endif %}
+</div>
+{%- endmacro %}

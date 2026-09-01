@@ -3,7 +3,8 @@
 {% block title %}{{ ticket.subject }} — Admin — Belvieu Digital{% endblock %}
 
 {% block content %}
-{% include 'admin/_nav.html' %}
+<div class="bd-page">
+<div class="bd-page__inner">
 
 {# Breadcrumb #}
 <div class="breadcrumb">
@@ -259,6 +260,8 @@
             {% endif %}
         </div>
     </div>
+</div>
+</div>
 </div>
 {% endblock %}
 

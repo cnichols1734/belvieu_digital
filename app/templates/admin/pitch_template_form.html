@@ -3,7 +3,8 @@
 {% block title %}{{ 'Edit' if is_edit else 'New' }} Pitch Template — Belvieu Digital{% endblock %}
 
 {% block content %}
-{% include 'admin/_nav.html' %}
+<div class="bd-page">
+<div class="bd-page__inner">
 
 <div class="breadcrumb">
     <a href="{{ url_for('admin.pitch_template_list') }}">Pitches</a>
@@ -78,6 +79,8 @@
             {% endraw %}
         </div>
     </div>
+</div>
+</div>
 </div>
 {% endblock %}
 
