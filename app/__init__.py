@@ -307,7 +307,7 @@ def register_cli(app):
             },
             metadata={
                 "type": "setup_fee",
-                "description": "One-time website build and setup fee. First month of hosting ($59) included free.",
+                "description": "One-time website build and setup fee. First month of hosting ($29) included free.",
             },
         )
 

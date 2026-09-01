@@ -666,7 +666,7 @@ class TestAdminDashboardEnhancements:
         resp = client.get("/admin/")
         assert resp.status_code == 200
         assert b"active subscriber" in resp.data
-        assert b"$59/mo" in resp.data
+        assert b"$29/mo" in resp.data
 
     def test_dashboard_shows_at_risk(self, client, seed_data, app):
         _login_admin(client)

@@ -90,7 +90,7 @@ def dashboard():
     active_count = BillingSubscription.query.filter_by(
         status="active", cancel_at_period_end=False
     ).count()
-    mrr = active_count * 59
+    mrr = active_count * 29
 
     # --- At-risk clients (past_due) - single query with JOIN ---
     at_risk_data = []

@@ -134,7 +134,7 @@ class TestAdminDashboard:
         login_admin(client, app)
         resp = client.get("/admin/")
         assert resp.status_code == 200
-        assert b"$59" in resp.data  # MRR from basic plan
+        assert b"$29" in resp.data  # MRR from basic plan
 
 
 # ══════════════════════════════════════════════
