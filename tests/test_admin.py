@@ -649,3 +649,79 @@ class TestAdminSiteOverride:
         )
         assert resp.status_code == 200
         assert b"Site not found" in resp.data
+
+
+# ══════════════════════════════════════════════
+#  STRIPE HEALTH
+# ══════════════════════════════════════════════
+
+
+def _fake_stripe_price(price_id, amount, interval=None, name="Test product"):
+    from types import SimpleNamespace
+
+    class FakePrice:
+        def __init__(self):
+            self.id = price_id
+            self.unit_amount = amount
+            self.livemode = False
+            self.active = True
+            self.recurring = SimpleNamespace(interval=interval) if interval else None
+            self.product = SimpleNamespace(
+                id="prod_test",
+                name=name,
+                active=True,
+            )
+
+        def get(self, *args, **kwargs):
+            raise TypeError("'get' is a dict method, but a Price is not a dict")
+
+    return FakePrice()
+
+
+class TestStripeHealth:
+    def test_unauthenticated_redirects(self, client):
+        resp = client.get("/admin/stripe-health")
+        assert resp.status_code == 302
+        assert "/auth/login" in resp.headers["Location"]
+
+    def test_non_admin_gets_403(self, client, app, seed_data):
+        login_client_user(client, app)
+        resp = client.get("/admin/stripe-health")
+        assert resp.status_code == 403
+
+    def test_page_loads_catalog_from_stripe_objects(self, client, app, seed_data, monkeypatch):
+        from types import SimpleNamespace
+
+        login_admin(client, app)
+
+        def fake_account():
+            return SimpleNamespace(
+                settings=SimpleNamespace(
+                    dashboard=SimpleNamespace(display_name="Belvieu Digital")
+                ),
+                business_profile=SimpleNamespace(name="Belvieu Digital"),
+            )
+
+        def fake_retrieve(price_id, expand=None):
+            if price_id == "price_basic_test":
+                return _fake_stripe_price(
+                    price_id, 2900, interval="month", name="Monthly Website Hosting"
+                )
+            return _fake_stripe_price(
+                price_id, 19100, interval=None, name="Website Setup Fee"
+            )
+
+        monkeypatch.setattr("stripe.Account.retrieve", fake_account)
+        monkeypatch.setattr("stripe.Price.retrieve", fake_retrieve)
+        monkeypatch.setattr(
+            "stripe.billing_portal.Configuration.list",
+            lambda limit=1: SimpleNamespace(data=[{"id": "bpc_test"}]),
+        )
+
+        resp = client.get("/admin/stripe-health")
+        assert resp.status_code == 200
+        assert b"$29.00/month" in resp.data
+        assert b"Monthly Website Hosting" in resp.data
+        assert b"price_basic_test" in resp.data
+        assert b"dict method" not in resp.data
+        assert b"Issues Detected" not in resp.data
