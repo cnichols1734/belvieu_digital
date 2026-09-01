@@ -346,25 +346,21 @@ def register_cli(app):
         _stripe.api_key = api_key
 
         def check_price(label: str, price_id: str) -> None:
+            from app.services.stripe_inspect import inspect_price
+
             if not price_id:
                 click.echo(f"  {label}: (not set)")
                 return
             try:
                 price = _stripe.Price.retrieve(price_id, expand=["product"])
-                product = price.get("product")
-                if isinstance(product, dict):
-                    product_active = product.get("active", "?")
-                else:
-                    prod_id = getattr(price, "product", None) or price.get("product")
-                    prod = _stripe.Product.retrieve(prod_id) if prod_id else None
-                    product_active = getattr(prod, "active", "?") if prod else "?"
-                livemode = getattr(price, "livemode", "?")
-                click.echo(f"  {label}: {price_id}")
-                click.echo(f"    exists=True, livemode={livemode}, product_active={product_active}")
-                if livemode is True and key_mode != "Live":
-                    click.echo("    WARNING: This price is Live but your key is Test.")
-                elif livemode is False and key_mode == "Live":
-                    click.echo("    WARNING: This price is Test but your key is Live.")
+                info = inspect_price(price, key_mode)
+                click.echo(f"  {label}: {info['id']}")
+                click.echo(
+                    f"    {info['amount_label']} · {info['product_name']} · "
+                    f"livemode={info['livemode']} · active={info['active']}"
+                )
+                if info["issues"]:
+                    click.echo(f"    WARNING: {'; '.join(info['issues'])}")
             except _stripe.error.InvalidRequestError as e:
                 click.echo(f"  {label}: {price_id}")
                 click.echo(f"    ERROR: {e}")

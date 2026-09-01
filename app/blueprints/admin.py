@@ -46,6 +46,7 @@ from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember, WorkspaceSettings
 from app.services import invite_service, ticket_service
 from app.services.email_service import send_email
+from app.services.stripe_inspect import inspect_price, stripe_field
 from app.models.prospect_activity import ProspectActivity
 from app.models.contact_form import ContactFormConfig
 from app.models.pitch_template import PitchTemplate
@@ -181,199 +182,166 @@ def dashboard():
 # ══════════════════════════════════════════════
 
 
+def _retrieve_catalog_price(_stripe, price_id, key_mode, label):
+    """Fetch and inspect a configured Stripe price. Returns (catalog_entry, check)."""
+    if not price_id:
+        return (
+            {
+                "label": label,
+                "status": "error",
+                "amount_label": "—",
+                "product_name": "Not configured",
+                "id": None,
+                "issues": ["Price ID is not set"],
+                "waived": False,
+            },
+            {
+                "name": label,
+                "status": "error",
+                "detail": f"{label} ID is not set",
+            },
+        )
+    try:
+        price = _stripe.Price.retrieve(price_id, expand=["product"])
+        info = inspect_price(price, key_mode)
+        info["label"] = label
+        info["waived"] = False
+        if info["status"] == "ok":
+            detail = f"{info['amount_label']} · {info['product_name']}"
+        else:
+            detail = f"{info['id']} — {'; '.join(info['issues'])}"
+        return info, {"name": label, "status": info["status"], "detail": detail}
+    except Exception as e:
+        return (
+            {
+                "label": label,
+                "status": "error",
+                "amount_label": "—",
+                "product_name": "Could not load",
+                "id": price_id,
+                "issues": [str(e)],
+                "waived": False,
+            },
+            {
+                "name": label,
+                "status": "error",
+                "detail": f"{price_id} — {e}",
+            },
+        )
+
+
 @admin_bp.route("/stripe-health")
 @admin_required
 def stripe_health():
-    """Stripe integration health dashboard — real-time checks + telemetry."""
+    """Stripe integration health dashboard — catalog, checks, billing traffic."""
     import stripe as _stripe
     from app.models.stripe_event import StripeEvent
 
     api_key = current_app.config.get("STRIPE_SECRET_KEY", "")
     _stripe.api_key = api_key
     key_mode = "Live" if api_key.startswith("sk_live_") else "Test"
+    dashboard_url = (
+        "https://dashboard.stripe.com"
+        if key_mode == "Live"
+        else "https://dashboard.stripe.com/test"
+    )
 
     checks = []
+    account_name = None
 
-    # ── 1. API Connectivity ──
     try:
         account = _stripe.Account.retrieve()
-        display_name = "Unknown"
-        if hasattr(account, "settings") and account.settings:
-            display_name = (
-                getattr(account.settings.dashboard, "display_name", None) or "Unknown"
-            )
-        if not display_name or display_name == "Unknown":
-            display_name = getattr(account, "business_profile", {})
-            if hasattr(display_name, "name"):
-                display_name = display_name.name or "Unknown"
+        settings = stripe_field(account, "settings")
+        dashboard = stripe_field(settings, "dashboard") if settings else None
+        display_name = stripe_field(dashboard, "display_name") if dashboard else None
+        if not display_name:
+            profile = stripe_field(account, "business_profile")
+            display_name = stripe_field(profile, "name") if profile else None
+        account_name = display_name or "Stripe account"
         checks.append(
             {
-                "name": "Stripe API",
+                "name": "API",
                 "status": "ok",
-                "detail": f"Connected — {display_name} ({key_mode} mode)",
+                "detail": f"Connected as {account_name}",
             }
         )
     except Exception as e:
         checks.append(
             {
-                "name": "Stripe API",
+                "name": "API",
                 "status": "error",
                 "detail": f"Connection failed: {e}",
             }
         )
 
-    # ── 2. Setup Price (skipped when promo is active) ──
     promo_active = current_app.config.get("PROMO_NO_SETUP_FEE", False)
     setup_price_id = current_app.config.get("STRIPE_SETUP_PRICE_ID", "")
-    if promo_active:
-        checks.append(
-            {
-                "name": "Setup Price",
-                "status": "ok",
-                "detail": "Waived — PROMO_NO_SETUP_FEE is enabled",
-            }
-        )
-    elif not setup_price_id:
-        checks.append(
-            {
-                "name": "Setup Price",
-                "status": "error",
-                "detail": "STRIPE_SETUP_PRICE_ID not set",
-            }
-        )
-    else:
-        try:
-            price = _stripe.Price.retrieve(setup_price_id, expand=["product"])
-            product = price.get("product")
-            product_active = (
-                product.get("active", False) if isinstance(product, dict) else "?"
-            )
-            price_live = getattr(price, "livemode", None)
-            mode_match = (price_live and key_mode == "Live") or (
-                not price_live and key_mode == "Test"
-            )
-            if not product_active:
-                checks.append(
-                    {
-                        "name": "Setup Price",
-                        "status": "error",
-                        "detail": f"{setup_price_id} — product is NOT active",
-                    }
-                )
-            elif not mode_match:
-                checks.append(
-                    {
-                        "name": "Setup Price",
-                        "status": "warn",
-                        "detail": f"{setup_price_id} — mode mismatch (price={'Live' if price_live else 'Test'}, key={key_mode})",
-                    }
-                )
-            else:
-                checks.append(
-                    {
-                        "name": "Setup Price",
-                        "status": "ok",
-                        "detail": f"${price.unit_amount / 100:.2f} one-time — product active",
-                    }
-                )
-        except Exception as e:
-            checks.append(
-                {
-                    "name": "Setup Price",
-                    "status": "error",
-                    "detail": f"{setup_price_id} — {e}",
-                }
-            )
-
-    # ── 3. Basic Price ──
     basic_price_id = current_app.config.get("STRIPE_BASIC_PRICE_ID", "")
-    if not basic_price_id:
+
+    monthly, monthly_check = _retrieve_catalog_price(
+        _stripe, basic_price_id, key_mode, "Monthly"
+    )
+    checks.append(monthly_check)
+
+    if promo_active:
+        setup = {
+            "label": "Setup",
+            "status": "ok",
+            "amount_label": "Waived",
+            "product_name": "Setup fee is off — checkout is monthly only",
+            "id": setup_price_id or None,
+            "issues": [],
+            "waived": True,
+            "interval": None,
+            "livemode": key_mode == "Live",
+            "active": True,
+        }
         checks.append(
             {
-                "name": "Basic Price",
-                "status": "error",
-                "detail": "STRIPE_BASIC_PRICE_ID not set",
+                "name": "Setup",
+                "status": "ok",
+                "detail": "Waived — PROMO_NO_SETUP_FEE is on",
             }
         )
     else:
-        try:
-            price = _stripe.Price.retrieve(basic_price_id, expand=["product"])
-            product = price.get("product")
-            product_active = (
-                product.get("active", False) if isinstance(product, dict) else "?"
-            )
-            price_live = getattr(price, "livemode", None)
-            mode_match = (price_live and key_mode == "Live") or (
-                not price_live and key_mode == "Test"
-            )
-            if not product_active:
-                checks.append(
-                    {
-                        "name": "Basic Price",
-                        "status": "error",
-                        "detail": f"{basic_price_id} — product is NOT active",
-                    }
-                )
-            elif not mode_match:
-                checks.append(
-                    {
-                        "name": "Basic Price",
-                        "status": "warn",
-                        "detail": f"{basic_price_id} — mode mismatch (price={'Live' if price_live else 'Test'}, key={key_mode})",
-                    }
-                )
-            else:
-                interval = ""
-                if price.recurring:
-                    interval = f"/{price.recurring.interval}"
-                checks.append(
-                    {
-                        "name": "Basic Price",
-                        "status": "ok",
-                        "detail": f"${price.unit_amount / 100:.2f}{interval} — product active",
-                    }
-                )
-        except Exception as e:
-            checks.append(
-                {
-                    "name": "Basic Price",
-                    "status": "error",
-                    "detail": f"{basic_price_id} — {e}",
-                }
-            )
+        setup, setup_check = _retrieve_catalog_price(
+            _stripe, setup_price_id, key_mode, "Setup"
+        )
+        checks.append(setup_check)
 
-    # ── 4. Webhook Secret ──
     webhook_secret = current_app.config.get("STRIPE_WEBHOOK_SECRET", "")
     last_event = StripeEvent.query.order_by(StripeEvent.processed_at.desc()).first()
     if not webhook_secret:
         checks.append(
             {
-                "name": "Webhook Secret",
+                "name": "Webhooks",
                 "status": "error",
-                "detail": "STRIPE_WEBHOOK_SECRET not set",
+                "detail": "STRIPE_WEBHOOK_SECRET is not set",
+            }
+        )
+    elif last_event and last_event.processed_at:
+        checks.append(
+            {
+                "name": "Webhooks",
+                "status": "ok",
+                "detail": f"Last event {last_event.processed_at.strftime('%b %d, %Y %H:%M UTC')}",
             }
         )
     else:
-        detail = f"Set (whsec_...{webhook_secret[-6:]})"
-        if last_event and last_event.processed_at:
-            detail += f" — last event: {last_event.processed_at.strftime('%b %d, %Y %H:%M UTC')}"
-        else:
-            detail += " — no webhook events received yet"
         checks.append(
             {
-                "name": "Webhook Secret",
-                "status": "ok" if last_event else "warn",
-                "detail": detail,
+                "name": "Webhooks",
+                "status": "warn",
+                "detail": "Secret is set — no events received yet",
             }
         )
 
-    # ── 5. Customer Portal ──
     try:
         configs = _stripe.billing_portal.Configuration.list(limit=1)
         if configs.data:
             checks.append(
                 {
-                    "name": "Customer Portal",
+                    "name": "Customer portal",
                     "status": "ok",
                     "detail": "Portal configuration found",
                 }
@@ -381,51 +349,51 @@ def stripe_health():
         else:
             checks.append(
                 {
-                    "name": "Customer Portal",
+                    "name": "Customer portal",
                     "status": "error",
-                    "detail": "No portal configuration — configure at Stripe Dashboard → Billing → Customer Portal",
+                    "detail": "No portal configuration in this Stripe account",
                 }
             )
     except Exception as e:
         checks.append(
             {
-                "name": "Customer Portal",
+                "name": "Customer portal",
                 "status": "warn",
                 "detail": f"Could not check: {e}",
             }
         )
 
-    # ── 6. Email Config ──
     mail_user = current_app.config.get("MAIL_USERNAME", "")
     mail_pass = current_app.config.get("MAIL_PASSWORD", "")
     if mail_user and mail_pass:
         checks.append(
             {
-                "name": "Email (SMTP)",
+                "name": "Email",
                 "status": "ok",
-                "detail": f"Configured — {mail_user}",
+                "detail": mail_user,
             }
         )
     else:
-        missing = []
-        if not mail_user:
-            missing.append("MAIL_USERNAME")
-        if not mail_pass:
-            missing.append("MAIL_PASSWORD")
+        missing = [
+            name
+            for name, val in (
+                ("MAIL_USERNAME", mail_user),
+                ("MAIL_PASSWORD", mail_pass),
+            )
+            if not val
+        ]
         checks.append(
             {
-                "name": "Email (SMTP)",
+                "name": "Email",
                 "status": "error",
-                "detail": f"Missing: {', '.join(missing)}",
+                "detail": f"Missing {', '.join(missing)}",
             }
         )
 
-    # ── Telemetry: Recent webhook events ──
     recent_events = (
-        StripeEvent.query.order_by(StripeEvent.processed_at.desc()).limit(10).all()
+        StripeEvent.query.order_by(StripeEvent.processed_at.desc()).limit(12).all()
     )
 
-    # ── Telemetry: Subscription summary (single query with GROUP BY) ──
     sub_counts = dict(
         db.session.query(
             BillingSubscription.status, db.func.count(BillingSubscription.id)
@@ -433,52 +401,56 @@ def stripe_health():
         .group_by(BillingSubscription.status)
         .all()
     )
-    sub_counts_active = sub_counts.get("active", 0)
-    sub_summary = {
-        "active": BillingSubscription.query.filter_by(
-            status="active", cancel_at_period_end=False
-        ).count(),
-        "cancelling": BillingSubscription.query.filter_by(
-            status="active", cancel_at_period_end=True
-        ).count(),
-        "past_due": sub_counts.get("past_due", 0),
-        "canceled": sub_counts.get("canceled", 0),
-        "total_customers": BillingCustomer.query.count(),
-    }
-    sub_summary = {
-        "active": sub_counts.get("active", 0),
-        "cancelling": sub_counts.get("active", 0) - sub_counts.get("active", 0),
-        "past_due": sub_counts.get("past_due", 0),
-        "canceled": sub_counts.get("canceled", 0),
-        "total_customers": BillingCustomer.query.count(),
-    }
-    sub_summary["cancelling"] = BillingSubscription.query.filter_by(
+    active_paying = BillingSubscription.query.filter_by(
+        status="active", cancel_at_period_end=False
+    ).count()
+    cancelling = BillingSubscription.query.filter_by(
         status="active", cancel_at_period_end=True
     ).count()
+    monthly_amount = monthly.get("amount") if monthly.get("status") == "ok" else 29
+    sub_summary = {
+        "active": active_paying,
+        "cancelling": cancelling,
+        "past_due": sub_counts.get("past_due", 0),
+        "canceled": sub_counts.get("canceled", 0),
+        "total_customers": BillingCustomer.query.count(),
+        "mrr": int(active_paying * monthly_amount),
+    }
 
-    # ── Telemetry: Recent billing audit events ──
     recent_billing_audits = (
         AuditEvent.query.filter(
             AuditEvent.action.like("subscription.%")
             | AuditEvent.action.like("prospect.auto_%")
         )
         .order_by(AuditEvent.created_at.desc())
-        .limit(10)
+        .limit(12)
         .all()
     )
 
-    all_ok = all(c["status"] == "ok" for c in checks)
-    has_errors = any(c["status"] == "error" for c in checks)
+    ok_count = sum(1 for c in checks if c["status"] == "ok")
+    warn_count = sum(1 for c in checks if c["status"] == "warn")
+    error_count = sum(1 for c in checks if c["status"] == "error")
+    all_ok = error_count == 0 and warn_count == 0
+    has_errors = error_count > 0
 
     return render_template(
         "admin/stripe_health.html",
         checks=checks,
+        monthly=monthly,
+        setup=setup,
         recent_events=recent_events,
         sub_summary=sub_summary,
         recent_billing_audits=recent_billing_audits,
         key_mode=key_mode,
+        dashboard_url=dashboard_url,
+        account_name=account_name,
+        promo_active=promo_active,
         all_ok=all_ok,
         has_errors=has_errors,
+        ok_count=ok_count,
+        warn_count=warn_count,
+        error_count=error_count,
+        last_event=last_event,
     )
 
 
