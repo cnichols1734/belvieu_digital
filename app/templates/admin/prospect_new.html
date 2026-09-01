@@ -3,7 +3,8 @@
 {% block title %}Add Prospect — Belvieu Digital{% endblock %}
 
 {% block content %}
-{% include 'admin/_nav.html' %}
+<div class="bd-page">
+<div class="bd-page__inner">
 
 {# Breadcrumb #}
 <div class="breadcrumb">
@@ -90,5 +91,7 @@
             <a href="{{ url_for('admin.prospect_list') }}" class="btn btn-ghost">Cancel</a>
         </div>
     </form>
+</div>
+</div>
 </div>
 {% endblock %}

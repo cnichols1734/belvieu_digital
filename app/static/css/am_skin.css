@@ -1,0 +1,70 @@
+/* ============================================================
+   APPLE MUSIC SKIN — glass chrome
+   Tokens live in style.css. This file frosts the shell only.
+   Work surfaces stay solid (--paper / --canvas).
+   ============================================================ */
+
+html.am-skin body {
+    font-family: var(--font-sans) !important;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: 0;
+}
+
+html.am-skin body.bd-shell {
+    background: #000000 !important;
+    position: relative;
+}
+html.am-skin[data-theme="light"] body.bd-shell {
+    background: #e0e0e0 !important;
+}
+
+html.am-skin header.bd-topbar,
+html.am-skin header.bd-topbar-mobile {
+    background: var(--am-glass) !important;
+    backdrop-filter: var(--am-glass-blur) !important;
+    -webkit-backdrop-filter: var(--am-glass-blur) !important;
+    border-bottom: 0.5px solid var(--am-glass-border) !important;
+    box-shadow: none !important;
+    color: var(--ink) !important;
+}
+
+@media (min-width: 768px) {
+    html.am-skin aside#sidebar.bd-sidebar {
+        background: var(--am-glass) !important;
+        backdrop-filter: var(--am-glass-blur) !important;
+        -webkit-backdrop-filter: var(--am-glass-blur) !important;
+        border: 0.5px solid var(--am-glass-border) !important;
+        border-radius: 20px !important;
+        box-shadow: var(--am-glass-shadow) !important;
+        overflow: hidden;
+    }
+}
+
+@media (max-width: 767px) {
+    html.am-skin aside#sidebar.bd-sidebar {
+        background: var(--am-glass) !important;
+        backdrop-filter: var(--am-glass-blur) !important;
+        -webkit-backdrop-filter: var(--am-glass-blur) !important;
+        border: 0.5px solid var(--am-glass-border) !important;
+        border-radius: 20px !important;
+        box-shadow: var(--am-glass-shadow) !important;
+    }
+}
+
+html.am-skin .bd-nav-link.is-active {
+    background: rgba(249, 115, 22, 0.16) !important;
+    color: #fb923c !important;
+}
+
+html.am-skin .bd-theme-btn,
+html.am-skin .bd-icon-btn,
+html.am-skin .bd-sidebar-toggle {
+    background: var(--am-control-bg);
+}
+
+html.am-skin body.bd-auth-page {
+    background: var(--canvas) !important;
+}
+html.am-skin[data-theme="dark"] body.bd-auth-page {
+    background: var(--canvas) !important;
+}

@@ -3,6 +3,9 @@
 {% block title %}Billing — {{ g.site.display_name or g.workspace.name }}{% endblock %}
 
 {% block content %}
+<div class="bd-page">
+<div class="bd-page__inner">
+
 <a href="{{ url_for('portal.dashboard', site_slug=g.site.site_slug) }}" class="back-link">
     <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clip-rule="evenodd"/></svg>
     Back to dashboard
@@ -76,5 +79,7 @@
             <a href="{{ url_for('billing.billing_overview', site_slug=g.site.site_slug) }}" class="btn btn-primary">Choose a plan</a>
         </div>
     {% endif %}
+</div>
+</div>
 </div>
 {% endblock %}
