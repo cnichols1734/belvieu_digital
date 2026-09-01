@@ -45,7 +45,7 @@ billing_bp = Blueprint("billing", __name__)
 def checkout(site_slug):
     """Create a Stripe Checkout Session and redirect to Stripe.
 
-    Single-plan checkout: $250 one-time setup fee + $59/mo subscription
+    Single-plan checkout: $250 one-time setup fee + $29/mo subscription
     with first recurring charge deferred 30 days (first month free).
     Accessible even when access_level is 'subscribe' or 'blocked'.
     """
