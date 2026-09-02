@@ -7,6 +7,7 @@ outreach via text, Facebook, or any non-email channel.
 Template variables use {{variable}} syntax:
   {{business_name}}  — prospect's business name
   {{demo_url}}       — live client-site URL (workers.dev or custom domain)
+  {{demo_site}}      — alias for {{demo_url}}
   {{contact_name}}   — full contact name
   {{first_name}}     — first name only
   {{my_phone}}       — your phone number
@@ -42,9 +43,11 @@ class PitchTemplate(db.Model):
     def render(self, prospect, portal_url="https://portal.belvieudigital.com", my_phone="(713) 725-4459"):
         """Replace template variables with prospect-specific values."""
         text = self.body
+        demo_url = prospect.demo_url or ""
         replacements = {
             "{{business_name}}": prospect.business_name or "",
-            "{{demo_url}}": prospect.demo_url or "",
+            "{{demo_url}}": demo_url,
+            "{{demo_site}}": demo_url,
             "{{contact_name}}": prospect.contact_name or "",
             "{{first_name}}": (prospect.contact_name or "").split(" ")[0] if prospect.contact_name else "",
             "{{my_phone}}": my_phone,
