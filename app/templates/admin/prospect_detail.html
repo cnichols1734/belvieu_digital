@@ -438,14 +438,15 @@
     {% endif %}
 </div>
 
-{# ── Pitch Templates ── #}
-{% if pitch_templates %}
+{# ── Pitch Templates (site_built / pitched only) ── #}
+{% if prospect.status in ['site_built', 'pitched'] %}
 <div class="mt-3">
     <div class="page-header-row" style="margin-bottom: 0.75rem;">
         <h2 style="font-size: 1.125rem;">Outreach Pitches</h2>
         <a href="{{ url_for('admin.pitch_template_list') }}" class="btn btn-sm btn-ghost">Manage Templates</a>
     </div>
 
+    {% if pitch_templates %}
     {% set initial = pitch_templates | selectattr('category', 'equalto', 'initial') | list %}
     {% set followup = pitch_templates | selectattr('category', 'equalto', 'followup') | list %}
 
@@ -488,6 +489,13 @@
             <div class="pitch-card-body" id="pitch-{{ t.id }}">{{ t.render(prospect, portal_url) }}</div>
         </div>
         {% endfor %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="empty-state" style="padding: 1.5rem 1rem;">
+        <h3>No active pitch templates</h3>
+        <p>Add a template to copy outreach pitches for this prospect.</p>
+        <a href="{{ url_for('admin.pitch_template_list') }}" class="btn btn-primary">Manage Templates</a>
     </div>
     {% endif %}
 </div>

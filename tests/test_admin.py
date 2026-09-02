@@ -725,3 +725,110 @@ class TestStripeHealth:
         assert b"price_basic_test" in resp.data
         assert b"dict method" not in resp.data
         assert b"Issues Detected" not in resp.data
+
+
+class TestPitchTemplates:
+    """Outreach pitch gating, render placeholders, and empty state."""
+
+    def test_render_demo_url_and_demo_site_alias(self, app, db_session):
+        from app.models.pitch_template import PitchTemplate
+
+        with app.app_context():
+            prospect = Prospect(
+                business_name="Acme HVAC",
+                contact_name="Sam Smith",
+                source="google_maps",
+                status="site_built",
+                demo_url="https://acme.example.dev",
+            )
+            template = PitchTemplate(
+                name="Test",
+                body="See {{demo_url}} or {{demo_site}} for {{business_name}}",
+                category="initial",
+                is_active=True,
+            )
+            rendered = template.render(prospect, portal_url="https://portal.test")
+            assert "https://acme.example.dev" in rendered
+            assert "{{demo_url}}" not in rendered
+            assert "{{demo_site}}" not in rendered
+            assert rendered.count("https://acme.example.dev") == 2
+            assert "Acme HVAC" in rendered
+
+    def test_site_built_shows_rendered_pitch(self, client, app, seed_data):
+        from app.models.pitch_template import PitchTemplate
+
+        login_admin(client, app)
+        with app.app_context():
+            prospect = Prospect(
+                business_name="Site Built Biz",
+                contact_name="Chris",
+                source="google_maps",
+                status="site_built",
+                demo_url="https://sitebuilt.example.dev",
+            )
+            db.session.add(prospect)
+            db.session.add(
+                PitchTemplate(
+                    name="Site Built Preview — $29/mo",
+                    body="Preview: {{demo_url}}",
+                    category="initial",
+                    is_active=True,
+                )
+            )
+            db.session.commit()
+            prospect_id = prospect.id
+
+        resp = client.get(f"/admin/prospects/{prospect_id}")
+        assert resp.status_code == 200
+        assert b"Outreach Pitches" in resp.data
+        assert b"https://sitebuilt.example.dev" in resp.data
+        assert b"pitch-copy-btn" in resp.data
+
+    def test_researching_hides_outreach_pitches(self, client, app, seed_data):
+        from app.models.pitch_template import PitchTemplate
+
+        login_admin(client, app)
+        with app.app_context():
+            prospect = Prospect(
+                business_name="Researching Biz",
+                source="google_maps",
+                status="researching",
+                demo_url="https://should-not-show.example.dev",
+            )
+            db.session.add(prospect)
+            db.session.add(
+                PitchTemplate(
+                    name="Hidden for researching",
+                    body="Should not appear {{demo_url}}",
+                    category="initial",
+                    is_active=True,
+                )
+            )
+            db.session.commit()
+            prospect_id = prospect.id
+
+        resp = client.get(f"/admin/prospects/{prospect_id}")
+        assert resp.status_code == 200
+        assert b"Outreach Pitches" not in resp.data
+        assert b"Hidden for researching" not in resp.data
+        assert b"Should not appear" not in resp.data
+        assert b"pitch-copy-btn" not in resp.data
+
+    def test_site_built_empty_state_when_no_templates(self, client, app, seed_data):
+        login_admin(client, app)
+        with app.app_context():
+            prospect = Prospect(
+                business_name="No Templates Biz",
+                source="google_maps",
+                status="site_built",
+                demo_url="https://empty.example.dev",
+            )
+            db.session.add(prospect)
+            db.session.commit()
+            prospect_id = prospect.id
+
+        resp = client.get(f"/admin/prospects/{prospect_id}")
+        assert resp.status_code == 200
+        assert b"Outreach Pitches" in resp.data
+        assert b"No active pitch templates" in resp.data
+        assert b"/admin/pitch-templates" in resp.data
